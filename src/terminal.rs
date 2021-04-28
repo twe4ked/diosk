@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
-use crossterm::style::{self, SetBackgroundColor as Bg, SetForegroundColor as Fg};
+use crossterm::style::{Print, SetBackgroundColor as Bg, SetForegroundColor as Fg};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{ExecutableCommand, QueueableCommand};
 use url::Url;
@@ -62,6 +62,7 @@ impl Terminal {
             .queue(EnterAlternateScreen)?
             // Hide the cusor, clear the screen, and set the initial cursor position
             .queue(cursor::Hide)?
+            .queue(Bg(colors::BACKGROUND))?
             .queue(terminal::Clear(terminal::ClearType::All))?
             .queue(cursor::MoveTo(1, 1))?;
 
@@ -106,9 +107,9 @@ impl Terminal {
     fn render_line(&mut self, line: &str, is_active: bool) -> crossterm::Result<Render> {
         // Highlight the current line
         let bg_color = if is_active {
-            Bg(style::Color::DarkGrey)
+            Bg(colors::REGENT_GREY)
         } else {
-            Bg(style::Color::Black)
+            Bg(colors::BACKGROUND)
         };
 
         match Line::parse(line) {
@@ -124,15 +125,15 @@ impl Terminal {
                     if line.is_empty() {
                         stdout()
                             .queue(self.cursor_pos.move_to())?
-                            .queue(Fg(style::Color::Reset))?
+                            .queue(Fg(colors::FOREGROUND))?
                             .queue(bg_color)?
-                            .queue(style::Print(" "))?;
+                            .queue(Print(" "))?;
                     } else {
                         stdout()
                             .queue(self.cursor_pos.move_to())?
-                            .queue(Fg(style::Color::Reset))?
+                            .queue(Fg(colors::FOREGROUND))?
                             .queue(bg_color)?
-                            .queue(style::Print(part))?;
+                            .queue(Print(part))?;
                     }
 
                     self.cursor_pos.x = 1;
@@ -149,13 +150,13 @@ impl Terminal {
                 stdout()
                     .queue(self.cursor_pos.move_to())?
                     .queue(bg_color)?
-                    .queue(Fg(style::Color::Cyan))?
-                    .queue(style::Print("=> "))?
-                    .queue(Fg(style::Color::Reset))?
-                    .queue(style::Print(name.unwrap_or_else(|| url.clone())))?
-                    .queue(Fg(style::Color::DarkGrey))?
-                    .queue(style::Print(" "))?
-                    .queue(style::Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
+                    .queue(Fg(colors::MANTIS))?
+                    .queue(Print("=> "))?
+                    .queue(Fg(colors::FOREGROUND))?
+                    .queue(Print(name.unwrap_or_else(|| url.clone())))?
+                    .queue(Fg(colors::REGENT_GREY))?
+                    .queue(Print(" "))?
+                    .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
 
                 self.cursor_pos.x = 1;
                 self.cursor_pos.y += 1;
@@ -174,7 +175,7 @@ impl Terminal {
             "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
             cursor_pos = self.cursor_pos.move_to(),
             fg_1 = Fg(colors::GREEN_SMOKE),
-            bg_1 = Bg(style::Color::DarkGrey),
+            bg_1 = Bg(colors::REGENT_GREY),
             fg_2 = Fg(colors::FOREGROUND),
             bg_2 = Bg(colors::BACKGROUND),
             status_code = status_code.code(),
@@ -187,7 +188,7 @@ impl Terminal {
     pub fn clear_screen(&mut self) -> crossterm::Result<()> {
         stdout()
             .execute(terminal::Clear(terminal::ClearType::All))?
-            .execute(Bg(style::Color::Black))?
+            .execute(Bg(colors::BACKGROUND))?
             .execute(cursor::MoveTo(1, 1))?;
 
         Ok(())
