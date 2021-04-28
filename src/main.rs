@@ -6,12 +6,9 @@ use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::{info, LevelFilter};
 use url::Url;
 
-mod gemini;
-mod terminal;
-
-use gemini::gemtext::Line;
-use gemini::{transaction, Response, StatusCode};
-use terminal::Terminal;
+use diosk::gemini::gemtext::Line;
+use diosk::gemini::{transaction, Response, StatusCode};
+use diosk::terminal::Terminal;
 
 //  ,gggggggggg,
 // dP"""88""""Y8b,                           ,dPYb,

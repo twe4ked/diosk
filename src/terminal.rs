@@ -10,7 +10,7 @@ use url::Url;
 use crate::gemini::gemtext::Line;
 use crate::gemini::StatusCode;
 
-mod colors;
+pub mod colors;
 
 #[derive(Debug)]
 struct CursorPosition {

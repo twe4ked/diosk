@@ -3,6 +3,7 @@ name = "diosk" # The Dioskouroi
 version = "0.1.0"
 authors = ["Odin Dutton <odindutton@gmail.com>"]
 edition = "2018"
+default-run = "diosk"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
