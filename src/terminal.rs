@@ -79,7 +79,7 @@ impl Terminal {
 
     pub fn render_page(
         &mut self,
-        current_line: usize,
+        current_line_index: usize,
         content: String,
         url: &Url,
         status_code: StatusCode,
@@ -89,7 +89,7 @@ impl Terminal {
         self.cursor_pos.y = 1;
 
         for (i, line) in content.lines().enumerate() {
-            let is_active = current_line == i;
+            let is_active = current_line_index == i;
 
             match self.render_line(line, is_active)? {
                 Render::Continue => {}

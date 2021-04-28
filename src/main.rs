@@ -36,7 +36,7 @@ enum Mode {
 }
 
 struct State {
-    current_line: usize,
+    current_line_index: usize,
     content: String,
     mode: Mode,
     tx: mpsc::Sender<Event>,
@@ -51,7 +51,7 @@ impl fmt::Debug for State {
         content.truncate(10);
 
         fmt.debug_struct("State")
-            .field("current_line", &self.current_line)
+            .field("current_line_index", &self.current_line_index)
             .field("mode", &self.mode)
             .field("current_url", &self.current_url.to_string())
             .finish()
@@ -67,16 +67,16 @@ impl State {
     }
 
     fn current_line(&self) -> &str {
-        self.line(self.current_line)
+        self.line(self.current_line_index)
     }
 
     fn down(&mut self) {
-        self.current_line += 1;
+        self.current_line_index += 1;
         self.tx.send(Event::Redraw).unwrap();
     }
 
     fn up(&mut self) {
-        self.current_line -= 1;
+        self.current_line_index -= 1;
         self.tx.send(Event::Redraw).unwrap();
     }
 
@@ -103,12 +103,12 @@ impl State {
 
     fn render_page(&mut self) {
         let content = self.content.clone();
-        let current_line = self.current_line;
+        let current_line_index = self.current_line_index;
         let current_url = self.current_url.clone();
         let last_status_code = self.last_status_code.clone();
 
         self.terminal
-            .render_page(current_line, content, &current_url, last_status_code)
+            .render_page(current_line_index, content, &current_url, last_status_code)
             .unwrap();
     }
 }
@@ -137,7 +137,7 @@ fn main() {
     let terminal = Terminal::setup_alternate_screen().unwrap();
 
     let state = State {
-        current_line: 0,
+        current_line_index: 0,
         content: initial_content,
         current_url: initial_url,
         last_status_code,
@@ -251,7 +251,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                 }
 
                 // Move the current line back to the top of the page
-                state.current_line = 0;
+                state.current_line_index = 0;
 
                 state.terminal.clear_screen().unwrap();
 
