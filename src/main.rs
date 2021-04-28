@@ -115,7 +115,12 @@ impl State {
 
 fn main() {
     simple_logging::log_to_file("target/out.log", LevelFilter::Info).unwrap();
-    log_panics::init();
+
+    let default_panic = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        Terminal::teardown().unwrap();
+        default_panic(info);
+    }));
 
     let initial_url = Url::parse("gemini://gemini.circumlunar.space/software/").unwrap();
     let (initial_content, last_status_code) =
