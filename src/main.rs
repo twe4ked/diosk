@@ -1,11 +1,9 @@
 use std::fmt;
-use std::io::stdin;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
+use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::{info, LevelFilter};
-use termion::event::Key;
-use termion::input::TermRead;
 use url::Url;
 
 mod gemini;
@@ -113,15 +111,14 @@ impl State {
         let last_status_code = self.last_status_code.clone();
 
         self.terminal
-            .render_page(current_line, content, &current_url, last_status_code);
+            .render_page(current_line, content, &current_url, last_status_code)
+            .unwrap();
     }
 }
 
 fn main() {
     simple_logging::log_to_file("target/out.log", LevelFilter::Info).unwrap();
     log_panics::init();
-
-    let stdin = stdin();
 
     let initial_url = Url::parse("gemini://gemini.circumlunar.space/software/").unwrap();
     let (initial_content, last_status_code) =
@@ -135,7 +132,7 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<Event>();
 
-    let terminal = Terminal::setup_alternate_screen();
+    let terminal = Terminal::setup_alternate_screen().unwrap();
 
     let state = State {
         current_line: 0,
@@ -162,49 +159,49 @@ fn main() {
         state.render_page();
     }
 
-    for c in stdin.keys() {
-        let mut state = state_mutex.lock().expect("poisoned");
-        let mode = state.mode.clone();
+    loop {
+        match read().unwrap() {
+            TermEvent::Key(event) => {
+                let mut state = state_mutex.lock().expect("poisoned");
+                let mode = state.mode.clone();
 
-        match mode {
-            Mode::Loading => {
-                if let Key::Char('q') = c.unwrap() {
-                    state.quit();
-                    break;
+                match mode {
+                    Mode::Loading => {
+                        if let KeyCode::Char('q') = event.code {
+                            state.quit();
+                            break;
+                        }
+                    }
+
+                    Mode::Normal => match event.code {
+                        KeyCode::Char('q') => {
+                            state.quit();
+                            break;
+                        }
+                        KeyCode::Char('g') => state.go(),
+                        KeyCode::Char('j') => state.down(),
+                        KeyCode::Char('k') => state.up(),
+                        KeyCode::Enter => state.enter(),
+                        _ => {}
+                    },
+
+                    Mode::Input => todo!(),
                 }
+
+                state.terminal.flush().unwrap();
+
+                info!("{:?}", &state);
             }
-
-            Mode::Normal => match c.unwrap() {
-                Key::Char('q') => {
-                    state.quit();
-                    break;
-                }
-                Key::Char('g') => state.go(),
-                Key::Char('j') => state.down(),
-                Key::Char('k') => state.up(),
-                Key::Char('\n') => state.enter(),
-                _ => {}
-            },
-
-            Mode::Input => todo!(),
+            TermEvent::Mouse(event) => info!("{:?}", event),
+            TermEvent::Resize(width, height) => info!("New size {}x{}", width, height),
         }
-
-        state.terminal.flush();
-
-        info!("{:?}", &state);
     }
 
     // Wait for the worker thread to finish
     worker.join().unwrap();
 
-    // Arc<Mutex<State>> -> State - so that it drops correctly
-    let mut state: State = match Arc::try_unwrap(state_mutex) {
-        Ok(mutex) => mutex.into_inner().expect("poisoned"),
-        Err(_) => panic!(),
-    };
-
-    // Re-show the cursor
-    state.terminal.show_cursor();
+    // Clean up the terminal
+    Terminal::teardown().unwrap();
 }
 
 fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
@@ -254,7 +251,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                 // Move the current line back to the top of the page
                 state.current_line = 0;
 
-                state.terminal.clear_screen();
+                state.terminal.clear_screen().unwrap();
 
                 state.render_page();
 

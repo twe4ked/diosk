@@ -1,16 +1,16 @@
-use std::fmt::{self, Display, Formatter};
-use std::io::{stdout, Stdout, Write};
+use std::fmt;
+use std::io::{stdout, Write};
 
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::{color, screen};
+use crossterm::cursor;
+use crossterm::style::{self, SetBackgroundColor as Bg, SetForegroundColor as Fg};
+use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::{ExecutableCommand, QueueableCommand};
 use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::StatusCode;
 
 mod colors;
-
-type Screen = screen::AlternateScreen<RawTerminal<Stdout>>;
 
 #[derive(Debug)]
 struct CursorPosition {
@@ -19,8 +19,10 @@ struct CursorPosition {
 }
 
 impl CursorPosition {
-    fn goto(&self) -> termion::cursor::Goto {
-        termion::cursor::Goto(self.x, self.y)
+    // TODO: We might want to switch to using 0 based indexes,
+    // since that's what crossterm deals with
+    fn move_to(&self) -> cursor::MoveTo {
+        cursor::MoveTo(self.x - 1, self.y - 1)
     }
 }
 
@@ -28,7 +30,6 @@ pub struct Terminal {
     width: u16,
     height: u16,
     cursor_pos: CursorPosition,
-    screen: Screen,
 }
 
 impl fmt::Debug for Terminal {
@@ -37,7 +38,6 @@ impl fmt::Debug for Terminal {
             .field("width", &self.width)
             .field("height", &self.height)
             .field("cursor_pos", &self.cursor_pos)
-            .field("screen", &"Screen")
             .finish()
     }
 }
@@ -48,27 +48,32 @@ enum Render {
 }
 
 impl Terminal {
-    pub fn setup_alternate_screen() -> Self {
-        let mut screen = screen::AlternateScreen::from(stdout().into_raw_mode().unwrap());
+    pub fn teardown() -> crossterm::Result<()> {
+        stdout().queue(LeaveAlternateScreen)?.queue(cursor::Show)?;
+        terminal::disable_raw_mode()?;
+        stdout().flush()?;
+        Ok(())
+    }
 
-        // Hide the cusor, clear the screen, and set the initial cursor position
-        write!(
-            screen,
-            "{}{}{}",
-            termion::cursor::Hide,
-            termion::clear::All,
-            termion::cursor::Goto(1, 1)
-        )
-        .unwrap();
+    pub fn setup_alternate_screen() -> crossterm::Result<Self> {
+        terminal::enable_raw_mode()?;
 
-        let (width, height) = termion::terminal_size().expect("unable to get terminal size");
+        stdout()
+            .queue(EnterAlternateScreen)?
+            // Hide the cusor, clear the screen, and set the initial cursor position
+            .queue(cursor::Hide)?
+            .queue(terminal::Clear(terminal::ClearType::All))?
+            .queue(cursor::MoveTo(1, 1))?;
 
-        Self {
+        stdout().flush()?;
+
+        let (width, height) = terminal::size()?;
+
+        Ok(Self {
             width,
             height,
-            screen,
             cursor_pos: CursorPosition { x: 1, y: 1 }, // 1-based
-        }
+        })
     }
 
     pub fn render_page(
@@ -77,7 +82,7 @@ impl Terminal {
         content: String,
         url: &Url,
         status_code: StatusCode,
-    ) {
+    ) -> crossterm::Result<()> {
         // Move back to the beginning before drawing page
         self.cursor_pos.x = 1;
         self.cursor_pos.y = 1;
@@ -85,7 +90,7 @@ impl Terminal {
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line == i;
 
-            match self.render_line(line, is_active) {
+            match self.render_line(line, is_active)? {
                 Render::Continue => {}
                 Render::Break => break,
             }
@@ -93,15 +98,17 @@ impl Terminal {
 
         self.draw_status_line(url, status_code);
 
-        self.screen.flush().unwrap();
+        stdout().flush()?;
+
+        Ok(())
     }
 
-    fn render_line(&mut self, line: &str, is_active: bool) -> Render {
+    fn render_line(&mut self, line: &str, is_active: bool) -> crossterm::Result<Render> {
         // Highlight the current line
-        let bg_color: Box<dyn BgColor> = if is_active {
-            Box::new(color::Bg(color::LightBlack))
+        let bg_color = if is_active {
+            Bg(style::Color::DarkGrey)
         } else {
-            Box::new(color::Bg(color::Black))
+            Bg(style::Color::Black)
         };
 
         match Line::parse(line) {
@@ -109,30 +116,23 @@ impl Terminal {
                 for part in textwrap::wrap(line, self.width as usize) {
                     // If we're going to overflow the screen, stop printing
                     if self.cursor_pos.y + 1 > self.height {
-                        return Render::Break;
+                        return Ok(Render::Break);
                     }
 
                     // If we've got a blank line, render a space so we can
                     // see it when it's highlighted
                     if line.is_empty() {
-                        write!(
-                            self.screen,
-                            "{}{}{} ",
-                            self.cursor_pos.goto(),
-                            color::Fg(color::Reset),
-                            bg_color,
-                        )
-                        .unwrap();
+                        stdout()
+                            .queue(self.cursor_pos.move_to())?
+                            .queue(Fg(style::Color::Reset))?
+                            .queue(bg_color)?
+                            .queue(style::Print(" "))?;
                     } else {
-                        write!(
-                            self.screen,
-                            "{}{}{}{}",
-                            self.cursor_pos.goto(),
-                            color::Fg(color::Reset),
-                            bg_color,
-                            part
-                        )
-                        .unwrap();
+                        stdout()
+                            .queue(self.cursor_pos.move_to())?
+                            .queue(Fg(style::Color::Reset))?
+                            .queue(bg_color)?
+                            .queue(style::Print(part))?;
                     }
 
                     self.cursor_pos.x = 1;
@@ -142,29 +142,27 @@ impl Terminal {
             Line::Link { url, name } => {
                 // If we're going to overflow the screen, stop printing
                 if self.cursor_pos.y + 1 > self.height {
-                    return Render::Break;
+                    return Ok(Render::Break);
                 }
 
                 // TODO: Handle wrapping
-                writeln!(
-                    self.screen,
-                    "{}{}{}=> {}{} {}{}",
-                    self.cursor_pos.goto(),
-                    bg_color,
-                    color::Fg(color::Cyan),
-                    color::Fg(color::Reset),
-                    name.unwrap_or_else(|| url.clone()),
-                    color::Fg(color::LightBlack),
-                    url // TODO: Hide if we don't have a name because the URL is already being displayed
-                )
-                .unwrap();
+                stdout()
+                    .queue(self.cursor_pos.move_to())?
+                    .queue(bg_color)?
+                    .queue(Fg(style::Color::Cyan))?
+                    .queue(style::Print("=> "))?
+                    .queue(Fg(style::Color::Reset))?
+                    .queue(style::Print(name.unwrap_or_else(|| url.clone())))?
+                    .queue(Fg(style::Color::DarkGrey))?
+                    .queue(style::Print(" "))?
+                    .queue(style::Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
 
                 self.cursor_pos.x = 1;
                 self.cursor_pos.y += 1;
             }
         }
 
-        Render::Continue
+        Ok(Render::Continue)
     }
 
     fn draw_status_line(&mut self, url: &Url, status_code: StatusCode) {
@@ -172,13 +170,13 @@ impl Terminal {
         self.cursor_pos.y = self.height;
 
         write!(
-            self.screen,
+            stdout(),
             "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
-            cursor_pos = self.cursor_pos.goto(),
-            fg_1 = color::Fg(colors::GREEN_SMOKE),
-            bg_1 = color::Bg(color::LightBlack),
-            fg_2 = color::Fg(colors::FOREGROUND),
-            bg_2 = color::Bg(colors::BACKGROUND),
+            cursor_pos = self.cursor_pos.move_to(),
+            fg_1 = Fg(colors::GREEN_SMOKE),
+            bg_1 = Bg(style::Color::DarkGrey),
+            fg_2 = Fg(colors::FOREGROUND),
+            bg_2 = Bg(colors::BACKGROUND),
             status_code = status_code.code(),
             url = url,
             width = self.width as usize - 5
@@ -186,42 +184,18 @@ impl Terminal {
         .unwrap();
     }
 
-    pub fn clear_screen(&mut self) {
-        write!(
-            self.screen,
-            "{}{}{}",
-            color::Bg(color::Black),
-            termion::clear::All,
-            termion::cursor::Goto(1, 1),
-        )
-        .unwrap();
+    pub fn clear_screen(&mut self) -> crossterm::Result<()> {
+        stdout()
+            .execute(terminal::Clear(terminal::ClearType::All))?
+            .execute(Bg(style::Color::Black))?
+            .execute(cursor::MoveTo(1, 1))?;
+
+        Ok(())
     }
 
-    pub fn flush(&mut self) {
-        self.screen.flush().unwrap();
-    }
+    pub fn flush(&mut self) -> crossterm::Result<()> {
+        stdout().flush()?;
 
-    pub fn show_cursor(&mut self) {
-        write!(self.screen, "{}", termion::cursor::Show).unwrap();
-    }
-}
-
-// This trait erases the color::Color type so we can box the different colors
-trait BgColor {
-    fn write_to(&self, w: &mut dyn fmt::Write) -> fmt::Result;
-}
-
-impl<C> BgColor for color::Bg<C>
-where
-    C: color::Color,
-{
-    fn write_to(&self, w: &mut dyn fmt::Write) -> fmt::Result {
-        write!(w, "{}", self)
-    }
-}
-
-impl Display for dyn BgColor {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::result::Result<(), fmt::Error> {
-        self.write_to(f)
+        Ok(())
     }
 }
