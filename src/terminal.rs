@@ -1,4 +1,3 @@
-use std::fmt;
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
@@ -26,20 +25,11 @@ impl CursorPosition {
     }
 }
 
+#[derive(Debug)]
 pub struct Terminal {
     width: u16,
     height: u16,
     cursor_pos: CursorPosition,
-}
-
-impl fmt::Debug for Terminal {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("Terminal")
-            .field("width", &self.width)
-            .field("height", &self.height)
-            .field("cursor_pos", &self.cursor_pos)
-            .finish()
-    }
 }
 
 enum Render {
