@@ -39,13 +39,6 @@ enum Render {
 }
 
 impl Terminal {
-    pub fn teardown() -> crossterm::Result<()> {
-        stdout().queue(LeaveAlternateScreen)?.queue(cursor::Show)?;
-        terminal::disable_raw_mode()?;
-        stdout().flush()?;
-        Ok(())
-    }
-
     pub fn setup_alternate_screen() -> crossterm::Result<Self> {
         terminal::enable_raw_mode()?;
 
@@ -244,4 +237,11 @@ impl Terminal {
 
         Ok(())
     }
+}
+
+pub fn teardown() -> crossterm::Result<()> {
+    stdout().queue(LeaveAlternateScreen)?.queue(cursor::Show)?;
+    terminal::disable_raw_mode()?;
+    stdout().flush()?;
+    Ok(())
 }

@@ -5,7 +5,7 @@ use log::{info, LevelFilter};
 use url::Url;
 
 use diosk::state::{Event, Mode, State};
-use diosk::terminal::Terminal;
+use diosk::terminal::{self, Terminal};
 use diosk::worker::Worker;
 
 //  ,gggggggggg,
@@ -24,7 +24,7 @@ fn main() {
 
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        Terminal::teardown().unwrap();
+        terminal::teardown().unwrap();
         default_panic(info);
     }));
 
@@ -88,5 +88,5 @@ fn main() {
     worker.join().unwrap();
 
     // Clean up the terminal
-    Terminal::teardown().unwrap();
+    terminal::teardown().unwrap();
 }
