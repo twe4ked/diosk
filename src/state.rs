@@ -141,16 +141,13 @@ impl State {
     }
 
     pub fn render_page(&mut self) {
-        let mut terminal = Terminal::new().unwrap();
-
-        terminal
-            .render_page(
-                self.current_line_index,
-                self.content.clone(),
-                &self.current_url,
-                &self.last_status_code,
-                self.scroll_offset,
-            )
-            .unwrap();
+        Terminal::render_page(
+            self.current_line_index,
+            self.content.clone(),
+            &self.current_url,
+            &self.last_status_code,
+            self.scroll_offset,
+        )
+        .unwrap();
     }
 }

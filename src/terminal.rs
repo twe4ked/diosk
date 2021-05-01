@@ -53,16 +53,13 @@ impl Terminal {
     }
 
     pub fn render_page(
-        &mut self,
         current_line_index: usize,
         content: Option<String>,
         url: &Option<Url>,
         status_code: &Option<StatusCode>,
         scroll_offset: u16,
     ) -> crossterm::Result<()> {
-        // Move back to the beginning before drawing page
-        self.cursor_pos.x = 1;
-        self.cursor_pos.y = 1;
+        let mut terminal = Terminal::new().unwrap();
 
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
@@ -72,7 +69,7 @@ impl Terminal {
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
 
-            match self.render_line(line, is_active, start_printing_from_row, row)? {
+            match terminal.render_line(line, is_active, start_printing_from_row, row)? {
                 Render::Continue(r) => {
                     // How many rows the line took up
                     row += r;
@@ -81,11 +78,11 @@ impl Terminal {
             }
 
             if is_active {
-                self.current_row = row;
+                terminal.current_row = row;
             }
         }
 
-        self.draw_status_line(url, status_code);
+        terminal.draw_status_line(url, status_code);
 
         stdout().flush()?;
 
