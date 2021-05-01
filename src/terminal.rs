@@ -175,8 +175,7 @@ impl Terminal {
         self.cursor_pos.x = 1;
         self.cursor_pos.y = self.height;
 
-        write!(
-            stdout(),
+        print!(
             "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
             cursor_pos = self.cursor_pos.move_to(),
             fg_1 = Fg(colors::GREEN_SMOKE),
@@ -192,8 +191,7 @@ impl Terminal {
                 .map(|u| u.to_string())
                 .unwrap_or_else(|| "".to_string()),
             width = self.width as usize - 5
-        )
-        .unwrap();
+        );
     }
 
     /// The number of rows a line takes up when wrapped
