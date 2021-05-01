@@ -6,6 +6,7 @@ use url::Url;
 
 use crate::gemini::{transaction, Response};
 use crate::state::{Event, Mode, State};
+use crate::terminal::Terminal;
 
 pub struct Worker;
 
@@ -67,7 +68,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                 // Move the current line back to the top of the page
                 state.current_line_index = 0;
 
-                state.terminal.clear_screen().unwrap();
+                Terminal::clear_screen().unwrap();
 
                 state.render_page();
 
@@ -77,7 +78,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                 let mut state = state_mutex.lock().expect("poisoned");
 
                 // TODO: We don't always need to clear the screen. Only for things like scrolling.
-                state.terminal.clear_screen().unwrap();
+                Terminal::clear_screen().unwrap();
 
                 state.render_page();
             }

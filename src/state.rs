@@ -30,7 +30,6 @@ pub struct State {
     pub tx: mpsc::Sender<Event>,
     pub current_url: Option<Url>,
     pub last_status_code: Option<StatusCode>,
-    pub terminal: Terminal,
     pub scroll_offset: u16,
 }
 
@@ -40,14 +39,13 @@ impl fmt::Debug for State {
             .field("current_line_index", &self.current_line_index)
             .field("mode", &self.mode)
             .field("current_url", &self.current_url)
-            .field("terminal", &self.terminal)
             .field("scroll_offset", &self.scroll_offset)
             .finish()
     }
 }
 
 impl State {
-    pub fn new(terminal: Terminal, tx: mpsc::Sender<Event>) -> Self {
+    pub fn new(tx: mpsc::Sender<Event>) -> Self {
         Self {
             current_line_index: 0,
             content: None,
@@ -55,7 +53,6 @@ impl State {
             last_status_code: None,
             mode: Mode::Normal,
             tx,
-            terminal,
             scroll_offset: 0,
         }
     }
@@ -90,10 +87,12 @@ impl State {
     pub fn down(&mut self) {
         self.current_line_index += 1;
 
-        let next_line = self.line(self.current_line_index);
-        let next_line_rows = self.terminal.line_wrapped_rows(&next_line);
+        let terminal = Terminal::new().unwrap();
 
-        if self.terminal.current_row() + next_line_rows > self.terminal.page_rows() {
+        let next_line = self.line(self.current_line_index);
+        let next_line_rows = terminal.line_wrapped_rows(&next_line);
+
+        if terminal.current_row() + next_line_rows > terminal.page_rows() {
             self.scroll_offset += next_line_rows;
         }
 
@@ -108,10 +107,12 @@ impl State {
 
         self.current_line_index -= 1;
 
-        let prev_line = self.line(self.current_line_index);
-        let prev_line_rows = self.terminal.line_wrapped_rows(&prev_line);
+        let terminal = Terminal::new().unwrap();
 
-        if self.terminal.current_row() - prev_line_rows == 0 {
+        let prev_line = self.line(self.current_line_index);
+        let prev_line_rows = terminal.line_wrapped_rows(&prev_line);
+
+        if terminal.current_row() - prev_line_rows == 0 {
             self.scroll_offset -= prev_line_rows;
         }
 
@@ -140,19 +141,15 @@ impl State {
     }
 
     pub fn render_page(&mut self) {
-        let content = self.content.clone();
-        let current_line_index = self.current_line_index;
-        let current_url = self.current_url.clone();
-        let scroll_offset = self.scroll_offset;
-        let last_status_code = self.last_status_code.clone();
+        let mut terminal = Terminal::new().unwrap();
 
-        self.terminal
+        terminal
             .render_page(
-                current_line_index,
-                content,
-                &current_url,
-                last_status_code,
-                scroll_offset,
+                self.current_line_index,
+                self.content.clone(),
+                &self.current_url,
+                &self.last_status_code,
+                self.scroll_offset,
             )
             .unwrap();
     }

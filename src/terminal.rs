@@ -57,7 +57,7 @@ impl Terminal {
         current_line_index: usize,
         content: Option<String>,
         url: &Option<Url>,
-        status_code: Option<StatusCode>,
+        status_code: &Option<StatusCode>,
         scroll_offset: u16,
     ) -> crossterm::Result<()> {
         // Move back to the beginning before drawing page
@@ -174,7 +174,7 @@ impl Terminal {
         Ok(Render::Continue(rows))
     }
 
-    fn draw_status_line(&mut self, url: &Option<Url>, status_code: Option<StatusCode>) {
+    fn draw_status_line(&mut self, url: &Option<Url>, status_code: &Option<StatusCode>) {
         self.cursor_pos.x = 1;
         self.cursor_pos.y = self.height;
 
@@ -187,6 +187,7 @@ impl Terminal {
             fg_2 = Fg(colors::FOREGROUND),
             bg_2 = Bg(colors::BACKGROUND),
             status_code = status_code
+                .as_ref()
                 .map(|s| s.code())
                 .unwrap_or_else(|| "--".to_string()),
             url = url
@@ -213,7 +214,7 @@ impl Terminal {
         self.current_row
     }
 
-    pub fn clear_screen(&mut self) -> crossterm::Result<()> {
+    pub fn clear_screen() -> crossterm::Result<()> {
         stdout()
             .execute(terminal::Clear(terminal::ClearType::All))?
             .execute(Bg(colors::BACKGROUND))?
@@ -222,7 +223,7 @@ impl Terminal {
         Ok(())
     }
 
-    pub fn flush(&mut self) -> crossterm::Result<()> {
+    pub fn flush() -> crossterm::Result<()> {
         stdout().flush()?;
 
         Ok(())

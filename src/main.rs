@@ -32,9 +32,7 @@ fn main() {
 
     terminal::setup_alternate_screen().unwrap();
 
-    let terminal = Terminal::new().unwrap();
-
-    let mut state = State::new(terminal, tx);
+    let mut state = State::new(tx);
 
     state.request(Url::parse("gemini://gemini.circumlunar.space/software/").unwrap());
 
@@ -77,7 +75,7 @@ fn main() {
                     Mode::Input => todo!(),
                 }
 
-                state.terminal.flush().unwrap();
+                Terminal::flush().unwrap();
 
                 info!("{:?}", &state);
             }
