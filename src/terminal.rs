@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
@@ -107,7 +108,7 @@ impl Terminal {
 
         match Line::parse(line) {
             Line::Normal => {
-                for part in textwrap::wrap(line, self.width as usize) {
+                for mut part in textwrap::wrap(line, self.width as usize) {
                     // If we're going to overflow the screen, stop printing
                     if self.cursor_pos.y + 1 > self.height {
                         return Ok(Render::Break);
@@ -122,18 +123,14 @@ impl Terminal {
                     // If we've got a blank line, render a space so we can
                     // see it when it's highlighted
                     if line.is_empty() {
-                        stdout()
-                            .queue(self.cursor_pos.move_to())?
-                            .queue(Fg(colors::FOREGROUND))?
-                            .queue(bg_color)?
-                            .queue(Print(" "))?;
-                    } else {
-                        stdout()
-                            .queue(self.cursor_pos.move_to())?
-                            .queue(Fg(colors::FOREGROUND))?
-                            .queue(bg_color)?
-                            .queue(Print(part))?;
+                        part = Cow::from(" ");
                     }
+
+                    stdout()
+                        .queue(self.cursor_pos.move_to())?
+                        .queue(Fg(colors::FOREGROUND))?
+                        .queue(bg_color)?
+                        .queue(Print(part))?;
 
                     self.cursor_pos.x = 1;
                     self.cursor_pos.y += 1;
