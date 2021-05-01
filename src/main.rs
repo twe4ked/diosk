@@ -4,7 +4,6 @@ use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::{info, LevelFilter};
 use url::Url;
 
-use diosk::gemini::{transaction, Response};
 use diosk::state::{Event, Mode, State};
 use diosk::terminal::Terminal;
 use diosk::worker::Worker;
@@ -29,30 +28,14 @@ fn main() {
         default_panic(info);
     }));
 
-    let initial_url = Url::parse("gemini://gemini.circumlunar.space/software/").unwrap();
-    let (initial_content, last_status_code) =
-        match transaction(&initial_url, 0).expect("initial transaction failed") {
-            Response::Body {
-                content,
-                status_code,
-            } => (content.unwrap(), status_code),
-            _ => panic!("initial URL must contain a body"),
-        };
-
     let (tx, rx) = mpsc::channel::<Event>();
 
     let terminal = Terminal::setup_alternate_screen().unwrap();
 
-    let state = State {
-        current_line_index: 0,
-        content: initial_content,
-        current_url: initial_url,
-        last_status_code,
-        mode: Mode::Normal,
-        tx,
-        terminal,
-        scroll_offset: 0,
-    };
+    let initial_url = Url::parse("gemini://gemini.circumlunar.space/software/").unwrap();
+
+    let state = State::new(terminal, tx, initial_url);
+
     let state_mutex = Arc::new(Mutex::new(state));
 
     let worker = Worker::run(state_mutex.clone(), rx);

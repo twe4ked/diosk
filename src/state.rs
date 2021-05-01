@@ -1,10 +1,12 @@
 use std::fmt;
 use std::sync::mpsc;
 
+use log::info;
 use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::StatusCode;
+use crate::gemini::{transaction, Response};
 use crate::terminal::Terminal;
 
 #[derive(Debug)]
@@ -48,6 +50,28 @@ impl fmt::Debug for State {
 }
 
 impl State {
+    pub fn new(terminal: Terminal, tx: mpsc::Sender<Event>, url: Url) -> Self {
+        let (content, last_status_code) =
+            match transaction(&url, 0).expect("initial transaction failed") {
+                Response::Body {
+                    content,
+                    status_code,
+                } => (content.unwrap(), status_code),
+                _ => panic!("initial URL must contain a body"),
+            };
+
+        Self {
+            current_line_index: 0,
+            content,
+            current_url: url,
+            last_status_code,
+            mode: Mode::Normal,
+            tx,
+            terminal,
+            scroll_offset: 0,
+        }
+    }
+
     fn line(&self, index: usize) -> &str {
         self.content
             .lines()
@@ -73,7 +97,20 @@ impl State {
     }
 
     pub fn up(&mut self) {
+        if self.current_line_index == 0 {
+            info!("top of content");
+            return;
+        }
+
         self.current_line_index -= 1;
+
+        let prev_line = self.line(self.current_line_index);
+        let prev_line_rows = self.terminal.line_wrapped_rows(&prev_line);
+
+        if self.terminal.current_row() - prev_line_rows == 0 {
+            self.scroll_offset -= prev_line_rows;
+        }
+
         self.tx.send(Event::Redraw).unwrap();
     }
 
