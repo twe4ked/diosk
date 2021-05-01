@@ -32,9 +32,9 @@ fn main() {
 
     let terminal = Terminal::setup_alternate_screen().unwrap();
 
-    let initial_url = Url::parse("gemini://gemini.circumlunar.space/software/").unwrap();
+    let mut state = State::new(terminal, tx);
 
-    let state = State::new(terminal, tx, initial_url);
+    state.request(Url::parse("gemini://gemini.circumlunar.space/software/").unwrap());
 
     let state_mutex = Arc::new(Mutex::new(state));
 

@@ -34,7 +34,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                     Err(url::ParseError::RelativeUrlWithoutBase) => {
                         // If we don't have a URL base, we clear the query/fragment and join
                         // on the requested path.
-                        let mut url = state.current_url.clone();
+                        let mut url = state.current_url.as_ref().unwrap().clone();
                         url.set_query(None);
                         url.set_fragment(None);
                         url.join(&url_or_path).unwrap()
@@ -50,9 +50,9 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                             content,
                             status_code,
                         } => {
-                            state.content = content.unwrap();
-                            state.current_url = url;
-                            state.last_status_code = status_code;
+                            state.content = content;
+                            state.current_url = Some(url);
+                            state.last_status_code = Some(status_code);
                         }
                         Response::RedirectLoop(_url) => todo!("handle redirect loops"),
                     },

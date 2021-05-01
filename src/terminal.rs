@@ -72,9 +72,9 @@ impl Terminal {
     pub fn render_page(
         &mut self,
         current_line_index: usize,
-        content: String,
-        url: &Url,
-        status_code: StatusCode,
+        content: Option<String>,
+        url: &Option<Url>,
+        status_code: Option<StatusCode>,
         scroll_offset: u16,
     ) -> crossterm::Result<()> {
         // Move back to the beginning before drawing page
@@ -83,6 +83,8 @@ impl Terminal {
 
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
+
+        let content = content.unwrap();
 
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
@@ -189,7 +191,7 @@ impl Terminal {
         Ok(Render::Continue(rows))
     }
 
-    fn draw_status_line(&mut self, url: &Url, status_code: StatusCode) {
+    fn draw_status_line(&mut self, url: &Option<Url>, status_code: Option<StatusCode>) {
         self.cursor_pos.x = 1;
         self.cursor_pos.y = self.height;
 
@@ -201,8 +203,13 @@ impl Terminal {
             bg_1 = Bg(colors::REGENT_GREY),
             fg_2 = Fg(colors::FOREGROUND),
             bg_2 = Bg(colors::BACKGROUND),
-            status_code = status_code.code(),
-            url = url,
+            status_code = status_code
+                .map(|s| s.code())
+                .unwrap_or_else(|| "--".to_string()),
+            url = url
+                .as_ref()
+                .map(|u| u.to_string())
+                .unwrap_or_else(|| "".to_string()),
             width = self.width as usize - 5
         )
         .unwrap();

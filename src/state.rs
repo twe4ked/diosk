@@ -25,24 +25,21 @@ pub enum Mode {
 
 pub struct State {
     pub current_line_index: usize,
-    pub content: String,
+    pub content: Option<String>,
     pub mode: Mode,
     pub tx: mpsc::Sender<Event>,
-    pub current_url: Url,
-    pub last_status_code: StatusCode,
+    pub current_url: Option<Url>,
+    pub last_status_code: Option<StatusCode>,
     pub terminal: Terminal,
     pub scroll_offset: u16,
 }
 
 impl fmt::Debug for State {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut content = self.content.clone();
-        content.truncate(10);
-
         fmt.debug_struct("State")
             .field("current_line_index", &self.current_line_index)
             .field("mode", &self.mode)
-            .field("current_url", &self.current_url.to_string())
+            .field("current_url", &self.current_url)
             .field("terminal", &self.terminal)
             .field("scroll_offset", &self.scroll_offset)
             .finish()
@@ -50,7 +47,20 @@ impl fmt::Debug for State {
 }
 
 impl State {
-    pub fn new(terminal: Terminal, tx: mpsc::Sender<Event>, url: Url) -> Self {
+    pub fn new(terminal: Terminal, tx: mpsc::Sender<Event>) -> Self {
+        Self {
+            current_line_index: 0,
+            content: None,
+            current_url: None,
+            last_status_code: None,
+            mode: Mode::Normal,
+            tx,
+            terminal,
+            scroll_offset: 0,
+        }
+    }
+
+    pub fn request(&mut self, url: Url) {
         let (content, last_status_code) =
             match transaction(&url, 0).expect("initial transaction failed") {
                 Response::Body {
@@ -60,20 +70,14 @@ impl State {
                 _ => panic!("initial URL must contain a body"),
             };
 
-        Self {
-            current_line_index: 0,
-            content,
-            current_url: url,
-            last_status_code,
-            mode: Mode::Normal,
-            tx,
-            terminal,
-            scroll_offset: 0,
-        }
+        self.content = Some(content);
+        self.last_status_code = Some(last_status_code);
     }
 
     fn line(&self, index: usize) -> &str {
         self.content
+            .as_ref()
+            .unwrap()
             .lines()
             .nth(index as usize)
             .expect("current line not found")
