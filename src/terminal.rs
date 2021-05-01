@@ -30,10 +30,11 @@ pub struct Terminal {
     width: u16,
     height: u16,
     cursor_pos: CursorPosition,
+    current_row: u16,
 }
 
 enum Render {
-    Continue,
+    Continue(u16),
     Break,
 }
 
@@ -64,6 +65,7 @@ impl Terminal {
             width,
             height,
             cursor_pos: CursorPosition { x: 1, y: 1 }, // 1-based
+            current_row: 1,
         })
     }
 
@@ -73,17 +75,28 @@ impl Terminal {
         content: String,
         url: &Url,
         status_code: StatusCode,
+        scroll_offset: u16,
     ) -> crossterm::Result<()> {
         // Move back to the beginning before drawing page
         self.cursor_pos.x = 1;
         self.cursor_pos.y = 1;
 
+        let start_printing_from_row = scroll_offset + 1;
+        let mut row = 0;
+
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
 
-            match self.render_line(line, is_active)? {
-                Render::Continue => {}
+            match self.render_line(line, is_active, start_printing_from_row, row)? {
+                Render::Continue(r) => {
+                    // How many rows the line took up
+                    row += r;
+                }
                 Render::Break => break,
+            }
+
+            if is_active {
+                self.current_row = row;
             }
         }
 
@@ -94,7 +107,15 @@ impl Terminal {
         Ok(())
     }
 
-    fn render_line(&mut self, line: &str, is_active: bool) -> crossterm::Result<Render> {
+    fn render_line(
+        &mut self,
+        line: &str,
+        is_active: bool,
+        start_printing_from_row: u16,
+        row: u16,
+    ) -> crossterm::Result<Render> {
+        let mut rows = 0;
+
         // Highlight the current line
         let bg_color = if is_active {
             Bg(colors::REGENT_GREY)
@@ -108,6 +129,12 @@ impl Terminal {
                     // If we're going to overflow the screen, stop printing
                     if self.cursor_pos.y + 1 > self.height {
                         return Ok(Render::Break);
+                    }
+
+                    rows += 1;
+
+                    if row + rows < start_printing_from_row {
+                        continue;
                     }
 
                     // If we've got a blank line, render a space so we can
@@ -136,6 +163,12 @@ impl Terminal {
                     return Ok(Render::Break);
                 }
 
+                rows += 1;
+
+                if row + rows < start_printing_from_row {
+                    return Ok(Render::Continue(rows));
+                }
+
                 // TODO: Handle wrapping
                 stdout()
                     .queue(self.cursor_pos.move_to())?
@@ -153,7 +186,7 @@ impl Terminal {
             }
         }
 
-        Ok(Render::Continue)
+        Ok(Render::Continue(rows))
     }
 
     fn draw_status_line(&mut self, url: &Url, status_code: StatusCode) {
@@ -173,6 +206,21 @@ impl Terminal {
             width = self.width as usize - 5
         )
         .unwrap();
+    }
+
+    /// The number of rows a line takes up when wrapped
+    pub fn line_wrapped_rows(&self, line: &str) -> u16 {
+        textwrap::wrap(line, self.width as usize).len() as _
+    }
+
+    pub fn page_rows(&self) -> u16 {
+        // -1 for the status row
+        self.height - 1
+    }
+
+    /// Represents the row that the cursor is on (indexed from the top of the screen)
+    pub fn current_row(&self) -> u16 {
+        self.current_row
     }
 
     pub fn clear_screen(&mut self) -> crossterm::Result<()> {

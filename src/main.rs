@@ -43,6 +43,7 @@ struct State {
     current_url: Url,
     last_status_code: StatusCode,
     terminal: Terminal,
+    scroll_offset: u16,
 }
 
 impl fmt::Debug for State {
@@ -54,6 +55,8 @@ impl fmt::Debug for State {
             .field("current_line_index", &self.current_line_index)
             .field("mode", &self.mode)
             .field("current_url", &self.current_url.to_string())
+            .field("terminal", &self.terminal)
+            .field("scroll_offset", &self.scroll_offset)
             .finish()
     }
 }
@@ -72,6 +75,14 @@ impl State {
 
     fn down(&mut self) {
         self.current_line_index += 1;
+
+        let next_line = self.line(self.current_line_index);
+        let next_line_rows = self.terminal.line_wrapped_rows(&next_line);
+
+        if self.terminal.current_row() + next_line_rows > self.terminal.page_rows() {
+            self.scroll_offset += next_line_rows;
+        }
+
         self.tx.send(Event::Redraw).unwrap();
     }
 
@@ -105,10 +116,17 @@ impl State {
         let content = self.content.clone();
         let current_line_index = self.current_line_index;
         let current_url = self.current_url.clone();
+        let scroll_offset = self.scroll_offset;
         let last_status_code = self.last_status_code.clone();
 
         self.terminal
-            .render_page(current_line_index, content, &current_url, last_status_code)
+            .render_page(
+                current_line_index,
+                content,
+                &current_url,
+                last_status_code,
+                scroll_offset,
+            )
             .unwrap();
     }
 }
@@ -144,6 +162,7 @@ fn main() {
         mode: Mode::Normal,
         tx,
         terminal,
+        scroll_offset: 0,
     };
     let state_mutex = Arc::new(Mutex::new(state));
 
@@ -261,6 +280,10 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
             }
             Event::Redraw => {
                 let mut state = state_mutex.lock().expect("poisoned");
+
+                // TODO: We don't always need to clear the screen. Only for things like scrolling.
+                state.terminal.clear_screen().unwrap();
+
                 state.render_page();
             }
             Event::Terminate => break,
