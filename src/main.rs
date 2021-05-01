@@ -1,14 +1,13 @@
-use std::fmt;
 use std::sync::{mpsc, Arc, Mutex};
-use std::thread;
 
 use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::{info, LevelFilter};
 use url::Url;
 
-use diosk::gemini::gemtext::Line;
-use diosk::gemini::{transaction, Response, StatusCode};
+use diosk::gemini::{transaction, Response};
+use diosk::state::{Event, Mode, State};
 use diosk::terminal::Terminal;
+use diosk::worker::Worker;
 
 //  ,gggggggggg,
 // dP"""88""""Y8b,                           ,dPYb,
@@ -20,116 +19,6 @@ use diosk::terminal::Terminal;
 //      88     ,8P' 88  i8'    ,8I ,8'  Yb   I8P' "Yb,
 //      88____,dP'_,88_,d8,   ,d8',8'_   8) ,d8    `Yb,
 //     8888888P"  8P""YP"Y8888P"  P' "YY8P8P88P      Y8
-
-#[derive(Debug)]
-enum Event {
-    Navigate(String),
-    Terminate,
-    Redraw,
-}
-
-#[derive(Debug, Clone)]
-enum Mode {
-    Normal,
-    Loading,
-    Input,
-}
-
-struct State {
-    current_line_index: usize,
-    content: String,
-    mode: Mode,
-    tx: mpsc::Sender<Event>,
-    current_url: Url,
-    last_status_code: StatusCode,
-    terminal: Terminal,
-    scroll_offset: u16,
-}
-
-impl fmt::Debug for State {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut content = self.content.clone();
-        content.truncate(10);
-
-        fmt.debug_struct("State")
-            .field("current_line_index", &self.current_line_index)
-            .field("mode", &self.mode)
-            .field("current_url", &self.current_url.to_string())
-            .field("terminal", &self.terminal)
-            .field("scroll_offset", &self.scroll_offset)
-            .finish()
-    }
-}
-
-impl State {
-    fn line(&self, index: usize) -> &str {
-        self.content
-            .lines()
-            .nth(index as usize)
-            .expect("current line not found")
-    }
-
-    fn current_line(&self) -> &str {
-        self.line(self.current_line_index)
-    }
-
-    fn down(&mut self) {
-        self.current_line_index += 1;
-
-        let next_line = self.line(self.current_line_index);
-        let next_line_rows = self.terminal.line_wrapped_rows(&next_line);
-
-        if self.terminal.current_row() + next_line_rows > self.terminal.page_rows() {
-            self.scroll_offset += next_line_rows;
-        }
-
-        self.tx.send(Event::Redraw).unwrap();
-    }
-
-    fn up(&mut self) {
-        self.current_line_index -= 1;
-        self.tx.send(Event::Redraw).unwrap();
-    }
-
-    fn go(&mut self) {
-        self.mode = Mode::Input;
-        todo!();
-    }
-
-    fn quit(&mut self) {
-        self.tx.send(Event::Terminate).unwrap();
-    }
-
-    fn enter(&mut self) {
-        let line = self.current_line();
-
-        if let Line::Link { url, .. } = Line::parse(line) {
-            // Navigate
-            self.mode = Mode::Loading;
-            self.tx.send(Event::Navigate(url)).unwrap();
-        } else {
-            // Nothing to do on non-link lines
-        }
-    }
-
-    fn render_page(&mut self) {
-        let content = self.content.clone();
-        let current_line_index = self.current_line_index;
-        let current_url = self.current_url.clone();
-        let scroll_offset = self.scroll_offset;
-        let last_status_code = self.last_status_code.clone();
-
-        self.terminal
-            .render_page(
-                current_line_index,
-                content,
-                &current_url,
-                last_status_code,
-                scroll_offset,
-            )
-            .unwrap();
-    }
-}
 
 fn main() {
     simple_logging::log_to_file("target/out.log", LevelFilter::Info).unwrap();
@@ -166,13 +55,7 @@ fn main() {
     };
     let state_mutex = Arc::new(Mutex::new(state));
 
-    let worker = {
-        let state_mutex = state_mutex.clone();
-
-        thread::spawn(move || {
-            handle_event_loop(state_mutex, rx);
-        })
-    };
+    let worker = Worker::run(state_mutex.clone(), rx);
 
     // Draw the initial page
     {
@@ -223,70 +106,4 @@ fn main() {
 
     // Clean up the terminal
     Terminal::teardown().unwrap();
-}
-
-fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
-    loop {
-        let event = rx.recv().unwrap();
-
-        match event {
-            Event::Navigate(url_or_path) => {
-                let mut state = state_mutex.lock().expect("poisoned");
-
-                // Parse the URL to ensure it's valid and check if it has a base path
-                let url = match Url::parse(&url_or_path) {
-                    Ok(url) => url,
-                    Err(url::ParseError::RelativeUrlWithoutBase) => {
-                        // If we don't have a URL base, we clear the query/fragment and join
-                        // on the requested path.
-                        let mut url = state.current_url.clone();
-                        url.set_query(None);
-                        url.set_fragment(None);
-                        url.join(&url_or_path).unwrap()
-                    }
-                    e => panic!("{:?}", e),
-                };
-
-                info!("navigating to: {}", &url);
-
-                match transaction(&url, 0) {
-                    Ok(response) => match response {
-                        Response::Body {
-                            content,
-                            status_code,
-                        } => {
-                            state.content = content.unwrap();
-                            state.current_url = url;
-                            state.last_status_code = status_code;
-                        }
-                        Response::RedirectLoop(_url) => todo!("handle redirect loops"),
-                    },
-                    Err(_) => {
-                        info!("transaction error");
-
-                        state.mode = Mode::Normal;
-                        continue;
-                    }
-                }
-
-                // Move the current line back to the top of the page
-                state.current_line_index = 0;
-
-                state.terminal.clear_screen().unwrap();
-
-                state.render_page();
-
-                state.mode = Mode::Normal;
-            }
-            Event::Redraw => {
-                let mut state = state_mutex.lock().expect("poisoned");
-
-                // TODO: We don't always need to clear the screen. Only for things like scrolling.
-                state.terminal.clear_screen().unwrap();
-
-                state.render_page();
-            }
-            Event::Terminate => break,
-        }
-    }
 }
