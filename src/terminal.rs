@@ -39,20 +39,10 @@ enum Render {
 }
 
 impl Terminal {
-    pub fn setup_alternate_screen() -> crossterm::Result<Self> {
-        terminal::enable_raw_mode()?;
-
-        stdout()
-            .queue(EnterAlternateScreen)?
-            // Hide the cusor, clear the screen, and set the initial cursor position
-            .queue(cursor::Hide)?
-            .queue(Bg(colors::BACKGROUND))?
-            .queue(terminal::Clear(terminal::ClearType::All))?
-            .queue(cursor::MoveTo(1, 1))?;
-
-        stdout().flush()?;
-
+    pub fn new() -> crossterm::Result<Self> {
         let (width, height) = terminal::size()?;
+
+        stdout().queue(cursor::MoveTo(1, 1))?;
 
         Ok(Self {
             width,
@@ -237,6 +227,21 @@ impl Terminal {
 
         Ok(())
     }
+}
+
+pub fn setup_alternate_screen() -> crossterm::Result<()> {
+    terminal::enable_raw_mode()?;
+
+    stdout()
+        .queue(EnterAlternateScreen)?
+        // Hide the cusor, clear the screen, and set the initial cursor position
+        .queue(cursor::Hide)?
+        .queue(Bg(colors::BACKGROUND))?
+        .queue(terminal::Clear(terminal::ClearType::All))?;
+
+    stdout().flush()?;
+
+    Ok(())
 }
 
 pub fn teardown() -> crossterm::Result<()> {

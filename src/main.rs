@@ -30,7 +30,9 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<Event>();
 
-    let terminal = Terminal::setup_alternate_screen().unwrap();
+    terminal::setup_alternate_screen().unwrap();
+
+    let terminal = Terminal::new().unwrap();
 
     let mut state = State::new(terminal, tx);
 
