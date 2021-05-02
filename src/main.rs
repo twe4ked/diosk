@@ -40,7 +40,7 @@ fn main() {
 
     let state = Arc::new(Mutex::new(state));
 
-    let worker = Worker::run(state.clone(), rx);
+    let worker = Worker::spawn(state.clone(), rx);
 
     // Run a blocking input loop
     run_input_loop(state);

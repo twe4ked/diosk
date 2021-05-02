@@ -11,7 +11,7 @@ use crate::terminal::Terminal;
 pub struct Worker;
 
 impl Worker {
-    pub fn run(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) -> thread::JoinHandle<()> {
+    pub fn spawn(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             handle_event_loop(state, rx);
         })
