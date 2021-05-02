@@ -21,25 +21,30 @@ use diosk::worker::Worker;
 fn main() {
     simple_logging::log_to_file("target/out.log", LevelFilter::Info).unwrap();
 
+    // Enhance the panic hook to handle re-setting the terminal
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         terminal::teardown().unwrap();
         default_panic(info);
     }));
 
-    let (tx, rx) = mpsc::channel::<Event>();
-
     terminal::setup_alternate_screen().unwrap();
 
-    let mut state = State::new(tx);
+    // Set up a channel for State to talk to the worker thread
+    let (tx, rx) = mpsc::channel::<Event>();
 
-    state.request("gemini://gemini.circumlunar.space/software/".to_string());
+    // Initialize State
+    let state = {
+        let mut state = State::new(tx);
 
-    // Draw the initial page
-    state.render_page();
+        // Request and render the initial page
+        state.request("gemini://gemini.circumlunar.space/software/".to_string());
+        state.render_page();
 
-    let state = Arc::new(Mutex::new(state));
+        Arc::new(Mutex::new(state))
+    };
 
+    // Spawn the worker thread
     let worker = Worker::spawn(state.clone(), rx);
 
     // Run a blocking input loop
