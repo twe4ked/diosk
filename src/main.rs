@@ -1,10 +1,10 @@
 use std::sync::{mpsc, Arc, Mutex};
 
-use crossterm::event::{read, Event as TermEvent, KeyCode};
-use log::{info, LevelFilter};
+use log::LevelFilter;
 
-use diosk::state::{Event, Mode, State};
-use diosk::terminal::{self, Terminal};
+use diosk::input::run as run_input_loop;
+use diosk::state::{Event, State};
+use diosk::terminal;
 use diosk::worker::Worker;
 
 //  ,gggggggggg,
@@ -27,7 +27,7 @@ fn main() {
         default_panic(info);
     }));
 
-    let (tx, rx) = mpsc::sync_channel::<Event>(32);
+    let (tx, rx) = mpsc::channel::<Event>();
 
     terminal::setup_alternate_screen().unwrap();
 
@@ -42,43 +42,8 @@ fn main() {
 
     let worker = Worker::run(state.clone(), rx);
 
-    loop {
-        match read().unwrap() {
-            TermEvent::Key(event) => {
-                let mut state = state.lock().expect("poisoned");
-                let mode = state.mode.clone();
-
-                match mode {
-                    Mode::Loading => {
-                        if let KeyCode::Char('q') = event.code {
-                            state.quit();
-                            break;
-                        }
-                    }
-
-                    Mode::Normal => match event.code {
-                        KeyCode::Char('q') => {
-                            state.quit();
-                            break;
-                        }
-                        KeyCode::Char('g') => state.go(),
-                        KeyCode::Char('j') => state.down(),
-                        KeyCode::Char('k') => state.up(),
-                        KeyCode::Enter => state.enter(),
-                        _ => {}
-                    },
-
-                    Mode::Input => todo!(),
-                }
-
-                Terminal::flush().unwrap();
-
-                info!("{:?}", &state);
-            }
-            TermEvent::Mouse(event) => info!("{:?}", event),
-            TermEvent::Resize(width, height) => info!("New size {}x{}", width, height),
-        }
-    }
+    // Run a blocking input loop
+    run_input_loop(state);
 
     // Wait for the worker thread to finish
     worker.join().unwrap();
