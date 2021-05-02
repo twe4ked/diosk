@@ -67,13 +67,19 @@ impl Terminal {
 
         let content = content.unwrap();
 
+        let mut buffer = Vec::new();
+
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
 
-            match terminal.render_line(line, is_active, start_printing_from_row, row)? {
+            match terminal.render_line(&mut buffer, line, is_active)? {
                 Render::Continue(r) => {
                     // How many rows the line took up
                     row += r;
+
+                    if row >= start_printing_from_row {
+                        stdout().write_all(&buffer).unwrap();
+                    }
                 }
                 Render::Break => break,
             }
@@ -81,6 +87,8 @@ impl Terminal {
             if is_active {
                 terminal.current_row = row;
             }
+
+            buffer.clear();
         }
 
         terminal.draw_status_line(url, status_code);
@@ -92,10 +100,9 @@ impl Terminal {
 
     fn render_line(
         &mut self,
+        buffer: &mut Vec<u8>,
         line: &str,
         is_active: bool,
-        start_printing_from_row: u16,
-        row: u16,
     ) -> crossterm::Result<Render> {
         let mut rows = 0;
 
@@ -114,24 +121,19 @@ impl Terminal {
                         return Ok(Render::Break);
                     }
 
-                    rows += 1;
-
-                    if row + rows < start_printing_from_row {
-                        continue;
-                    }
-
                     // If we've got a blank line, render a space so we can
                     // see it when it's highlighted
                     if line.is_empty() {
                         part = Cow::from(" ");
                     }
 
-                    stdout()
+                    buffer
                         .queue(self.cursor_pos.move_to())?
                         .queue(Fg(colors::FOREGROUND))?
                         .queue(bg_color)?
                         .queue(Print(part))?;
 
+                    rows += 1;
                     self.cursor_pos.x = 1;
                     self.cursor_pos.y += 1;
                 }
@@ -142,14 +144,8 @@ impl Terminal {
                     return Ok(Render::Break);
                 }
 
-                rows += 1;
-
-                if row + rows < start_printing_from_row {
-                    return Ok(Render::Continue(rows));
-                }
-
                 // TODO: Handle wrapping
-                stdout()
+                buffer
                     .queue(self.cursor_pos.move_to())?
                     .queue(bg_color)?
                     .queue(Fg(colors::MANTIS))?
@@ -160,6 +156,7 @@ impl Terminal {
                     .queue(Print(" "))?
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
 
+                rows += 1;
                 self.cursor_pos.x = 1;
                 self.cursor_pos.y += 1;
             }
