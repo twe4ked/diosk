@@ -111,20 +111,24 @@ pub enum Response {
 pub enum TransactionError {
     #[error("see: https://github.com/briansmith/webpki/issues/90")]
     BadDer,
+    #[error("invalid DNS name")]
+    InvalidDnsName(#[from] webpki::InvalidDNSNameError),
+    #[error("IO error")]
+    IoError(#[from] io::Error),
 }
 
 pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
     let host = url.host_str().expect("no host");
 
     let config = new_config();
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(&host).unwrap();
+    let dns_name = webpki::DNSNameRef::try_from_ascii_str(&host)?;
     let mut tls_client = rustls::ClientSession::new(&Arc::new(config), dns_name);
 
     // C: Opens connection
     // S: Accepts connection
     // C/S: Complete TLS handshake (see section 4)
     // C: Validates server certificate (see 4.2)
-    let mut socket = TcpStream::connect(&format!("{}:{}", host, PORT)).unwrap();
+    let mut socket = TcpStream::connect(&format!("{}:{}", host, PORT))?;
 
     let mut stream = rustls::Stream::new(&mut tls_client, &mut socket);
 
@@ -150,7 +154,7 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
 
     // Read the header
     let mut header = String::new();
-    reader.read_line(&mut header).unwrap();
+    reader.read_line(&mut header)?;
     let status_code = StatusCode::parse(&header);
 
     // S: Sends response body (text or binary data) (see 3.3)
@@ -170,7 +174,8 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
                 }
             }
 
-            let mime_type = mime_type.unwrap();
+            let mime_type =
+                mime_type.unwrap_or_else(|| "text/gemini".parse::<Mime>().expect("infallible"));
             let charset = mime_type.get_param("charset").unwrap_or(mime::UTF_8);
 
             // C: Handles response (see 3.4)
