@@ -35,15 +35,12 @@ fn main() {
 
     state.request("gemini://gemini.circumlunar.space/software/".to_string());
 
+    // Draw the initial page
+    state.render_page();
+
     let state_mutex = Arc::new(Mutex::new(state));
 
     let worker = Worker::run(state_mutex.clone(), rx);
-
-    // Draw the initial page
-    {
-        let mut state = state_mutex.lock().expect("poisoned");
-        state.render_page();
-    }
 
     loop {
         match read().unwrap() {
