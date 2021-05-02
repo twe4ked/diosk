@@ -28,7 +28,7 @@ fn main() {
         default_panic(info);
     }));
 
-    let (tx, rx) = mpsc::channel::<Event>();
+    let (tx, rx) = mpsc::sync_channel::<Event>(32);
 
     terminal::setup_alternate_screen().unwrap();
 

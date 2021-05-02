@@ -27,7 +27,7 @@ pub struct State {
     pub current_line_index: usize,
     pub content: Option<String>,
     pub mode: Mode,
-    pub tx: mpsc::Sender<Event>,
+    pub tx: mpsc::SyncSender<Event>,
     pub current_url: Option<Url>,
     pub last_status_code: Option<StatusCode>,
     pub scroll_offset: u16,
@@ -45,7 +45,7 @@ impl fmt::Debug for State {
 }
 
 impl State {
-    pub fn new(tx: mpsc::Sender<Event>) -> Self {
+    pub fn new(tx: mpsc::SyncSender<Event>) -> Self {
         Self {
             current_line_index: 0,
             content: None,
