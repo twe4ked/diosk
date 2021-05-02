@@ -2,7 +2,6 @@ use std::sync::{mpsc, Arc, Mutex};
 
 use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::{info, LevelFilter};
-use url::Url;
 
 use diosk::state::{Event, Mode, State};
 use diosk::terminal::{self, Terminal};
@@ -34,7 +33,7 @@ fn main() {
 
     let mut state = State::new(tx);
 
-    state.request(Url::parse("gemini://gemini.circumlunar.space/software/").unwrap());
+    state.request("gemini://gemini.circumlunar.space/software/".to_string());
 
     let state_mutex = Arc::new(Mutex::new(state));
 

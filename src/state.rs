@@ -6,7 +6,6 @@ use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::StatusCode;
-use crate::gemini::{transaction, Response};
 use crate::terminal::Terminal;
 
 #[derive(Debug)]
@@ -57,18 +56,9 @@ impl State {
         }
     }
 
-    pub fn request(&mut self, url: Url) {
-        let (content, last_status_code) =
-            match transaction(&url, 0).expect("initial transaction failed") {
-                Response::Body {
-                    content,
-                    status_code,
-                } => (content.unwrap(), status_code),
-                _ => panic!("initial URL must contain a body"),
-            };
-
-        self.content = Some(content);
-        self.last_status_code = Some(last_status_code);
+    pub fn request(&mut self, url: String) {
+        self.mode = Mode::Loading;
+        self.tx.send(Event::Navigate(url)).unwrap();
     }
 
     fn line(&self, index: usize) -> &str {
@@ -147,6 +137,7 @@ impl State {
             &self.current_url,
             &self.last_status_code,
             self.scroll_offset,
+            &self.mode.clone(),
         )
         .unwrap();
     }

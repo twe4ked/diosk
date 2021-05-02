@@ -9,6 +9,7 @@ use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::StatusCode;
+use crate::state;
 
 pub mod colors;
 
@@ -59,13 +60,17 @@ impl Terminal {
         url: &Option<Url>,
         status_code: &Option<StatusCode>,
         scroll_offset: u16,
+        mode: &state::Mode,
     ) -> crossterm::Result<()> {
         let mut terminal = Terminal::new().unwrap();
 
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
 
-        let content = content.unwrap();
+        let content = content.unwrap_or_else(|| match mode {
+            state::Mode::Loading => "Loading...".to_string(),
+            s => unimplemented!("not content for state: {:?}", s),
+        });
 
         let mut buffer = Vec::new();
 
