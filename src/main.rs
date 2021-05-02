@@ -38,14 +38,14 @@ fn main() {
     // Draw the initial page
     state.render_page();
 
-    let state_mutex = Arc::new(Mutex::new(state));
+    let state = Arc::new(Mutex::new(state));
 
-    let worker = Worker::run(state_mutex.clone(), rx);
+    let worker = Worker::run(state.clone(), rx);
 
     loop {
         match read().unwrap() {
             TermEvent::Key(event) => {
-                let mut state = state_mutex.lock().expect("poisoned");
+                let mut state = state.lock().expect("poisoned");
                 let mode = state.mode.clone();
 
                 match mode {

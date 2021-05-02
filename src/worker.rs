@@ -11,23 +11,20 @@ use crate::terminal::Terminal;
 pub struct Worker;
 
 impl Worker {
-    pub fn run(
-        state_mutex: Arc<Mutex<State>>,
-        rx: mpsc::Receiver<Event>,
-    ) -> thread::JoinHandle<()> {
+    pub fn run(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) -> thread::JoinHandle<()> {
         thread::spawn(move || {
-            handle_event_loop(state_mutex, rx);
+            handle_event_loop(state, rx);
         })
     }
 }
 
-fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
+fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
     loop {
         let event = rx.recv().unwrap();
 
         match event {
             Event::Navigate(url_or_path) => {
-                let mut state = state_mutex.lock().expect("poisoned");
+                let mut state = state.lock().expect("poisoned");
 
                 // Parse the URL to ensure it's valid and check if it has a base path
                 let url = match Url::parse(&url_or_path) {
@@ -75,7 +72,7 @@ fn handle_event_loop(state_mutex: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) 
                 state.mode = Mode::Normal;
             }
             Event::Redraw => {
-                let mut state = state_mutex.lock().expect("poisoned");
+                let mut state = state.lock().expect("poisoned");
 
                 // TODO: We don't always need to clear the screen. Only for things like scrolling.
                 Terminal::clear_screen().unwrap();
