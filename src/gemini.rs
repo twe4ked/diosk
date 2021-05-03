@@ -142,7 +142,7 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
     // C: Sends request (one CRLF terminated line) (see section 2)
     let request = format!("{}\r\n", url);
     info!("sending request: {}", url);
-    stream.write(request.as_bytes())?;
+    stream.write_all(request.as_bytes())?;
 
     // S: Sends response header (one CRLF terminated line), closes connection under non-success
     //      conditions (see 3.1 and 3.2)
