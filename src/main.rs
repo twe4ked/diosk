@@ -1,7 +1,7 @@
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 use diosk::input::run as run_input_loop;
-use diosk::state::{Event, State};
+use diosk::state::State;
 use diosk::terminal;
 use diosk::worker::Worker;
 
@@ -31,18 +31,15 @@ fn main() {
 
     terminal::setup_alternate_screen().unwrap();
 
-    // Set up a channel for State to talk to the worker thread
-    let (tx, rx) = mpsc::channel::<Event>();
-
     // Initialize State
-    let state = {
-        let mut state = State::new(tx);
+    let (state, rx) = {
+        let (mut state, rx) = State::new();
 
         // Request and render the initial page
         state.request("gemini://gemini.circumlunar.space/software/".to_string());
         state.render_page();
 
-        Arc::new(Mutex::new(state))
+        (Arc::new(Mutex::new(state)), rx)
     };
 
     // Spawn the worker thread

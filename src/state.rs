@@ -44,7 +44,14 @@ impl fmt::Debug for State {
 }
 
 impl State {
-    pub fn new(tx: mpsc::Sender<Event>) -> Self {
+    pub fn new() -> (Self, mpsc::Receiver<Event>) {
+        // Set up a channel for State to talk to the worker thread
+        let (tx, rx) = mpsc::channel::<Event>();
+
+        (Self::new_with_tx(tx), rx)
+    }
+
+    fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {
         Self {
             current_line_index: 0,
             content: None,
