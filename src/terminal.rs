@@ -7,7 +7,7 @@ use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{ExecutableCommand, QueueableCommand};
 
 use crate::gemini::gemtext::Line;
-use crate::state::{self, StatusLineContext};
+use crate::state::StatusLineContext;
 
 pub mod colors;
 
@@ -54,20 +54,14 @@ impl Terminal {
 
     pub fn render_page(
         current_line_index: usize,
-        content: Option<String>,
+        content: String,
         scroll_offset: u16,
-        mode: &state::Mode,
         status_line_context: StatusLineContext,
     ) -> crossterm::Result<()> {
         let mut terminal = Terminal::new().unwrap();
 
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
-
-        let content = content.unwrap_or_else(|| match mode {
-            state::Mode::Loading => "Loading...".to_string(),
-            s => unimplemented!("not content for state: {:?}", s),
-        });
 
         let mut buffer = Vec::new();
 

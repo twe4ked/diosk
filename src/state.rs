@@ -142,12 +142,18 @@ impl State {
 
         Terminal::render_page(
             self.current_line_index,
-            self.content.clone(),
+            self.content(),
             self.scroll_offset,
-            &self.mode,
             status_line_context,
         )
         .unwrap();
+    }
+
+    fn content(&self) -> String {
+        self.content.clone().unwrap_or_else(|| match &self.mode {
+            Mode::Loading => "Loading...".to_string(),
+            s => unimplemented!("not content for state: {:?}", s),
+        })
     }
 }
 
