@@ -51,39 +51,46 @@ pub enum StatusCode {
     },
 }
 
+#[derive(Error, Debug)]
+#[error("status code parse error")]
+pub struct StatusCodeParseError;
+
 impl StatusCode {
     // <STATUS><SPACE><META><CR><LF>
-    fn parse(input: &str) -> StatusCode {
+    fn parse(input: &str) -> Result<StatusCode, StatusCodeParseError> {
         info!("header: {}", input.trim());
 
-        let mut parts = input.split(' ');
+        let mut parts = input.splitn(2, ' ');
 
-        let code = parts.next().unwrap()[0..2].to_string();
+        let code: String = parts.next().expect("infallible").chars().take(2).collect();
 
-        match &code[0..1] {
-            "2" => {
+        match code.chars().next() {
+            Some('2') => {
                 // The <META> line is a MIME media type which applies to the response body
                 let rest: String = parts.collect();
                 let rest = rest.trim();
 
-                let mime_type: mime::Mime = rest.parse().expect("unable to parse mime type");
+                let mime_type: mime::Mime = rest
+                    .parse()
+                    .unwrap_or_else(|_| "text/gemini; charset=utf-8".parse().expect("infallible"));
 
-                StatusCode::Success {
+                Ok(StatusCode::Success {
                     code,
                     mime_type: Some(mime_type),
-                }
+                })
             }
-            "3" => {
+            Some('3') => {
                 // <META> is a new URL for the requested resource
                 let url = parts.next().map(|s| s.to_owned());
-                StatusCode::Redirect { code, url }
+                Ok(StatusCode::Redirect { code, url })
             }
-            "4" => {
+            Some('4') => {
                 // The contents of <META> may provide additional information on the failure, and should be
                 // displayed to human users
-                StatusCode::TemporaryFailure { code }
+                Ok(StatusCode::TemporaryFailure { code })
             }
-            s => panic!("invalid status code: {}", s),
+            Some(s) => panic!("invalid status code: {}", s),
+            _ => Err(StatusCodeParseError {}),
         }
     }
 
@@ -113,6 +120,8 @@ pub enum TransactionError {
     InvalidDnsName(#[from] webpki::InvalidDNSNameError),
     #[error("IO error")]
     IoError(#[from] io::Error),
+    #[error("status code parse error")]
+    StatusCodeParseError(#[from] StatusCodeParseError),
 }
 
 pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
@@ -142,7 +151,7 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
     // Read the header
     let mut header = String::new();
     reader.read_line(&mut header)?;
-    let status_code = StatusCode::parse(&header);
+    let status_code = StatusCode::parse(&header)?;
 
     // S: Sends response body (text or binary data) (see 3.3)
     // S: Closes connection
@@ -197,5 +206,19 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
                 Url::parse(&url.expect("missing redirect URL")).expect("invalid redirect URL");
             transaction(&url, redirect_count + 1)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn status_code_parse() {
+        assert!(StatusCode::parse(&"20 text/plain\r\n").is_ok());
+        assert!(StatusCode::parse(&"20").is_ok());
+        assert!(StatusCode::parse(&"30").is_ok());
+
+        assert!(StatusCode::parse(&"").is_err());
     }
 }
