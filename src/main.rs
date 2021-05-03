@@ -26,6 +26,9 @@ fn main() {
     std::panic::set_hook(Box::new(move |info| {
         terminal::teardown().unwrap();
         default_panic(info);
+
+        // Ensure the process is exited if a thread panics
+        std::process::exit(1);
     }));
 
     terminal::setup_alternate_screen().unwrap();
