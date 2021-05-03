@@ -109,8 +109,6 @@ pub enum Response {
 
 #[derive(Error, Debug)]
 pub enum TransactionError {
-    #[error("see: https://github.com/briansmith/webpki/issues/90")]
-    BadDer,
     #[error("invalid DNS name")]
     InvalidDnsName(#[from] webpki::InvalidDNSNameError),
     #[error("IO error")]
@@ -134,19 +132,8 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
 
     // C: Sends request (one CRLF terminated line) (see section 2)
     let request = format!("{}\r\n", url);
-
     info!("sending request: {}", url);
-
-    match stream.write(request.as_bytes()) {
-        Ok(_) => {}
-        Err(e) => match e.kind() {
-            io::ErrorKind::InvalidData => {
-                // Custom { kind: InvalidData, error: WebPKIError(BadDER) }
-                return Err(TransactionError::BadDer);
-            }
-            _ => panic!("unable to write to stream: {}", e),
-        },
-    }
+    stream.write(request.as_bytes())?;
 
     // S: Sends response header (one CRLF terminated line), closes connection under non-success
     //      conditions (see 3.1 and 3.2)
