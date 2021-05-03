@@ -17,19 +17,20 @@ use diosk::worker::Worker;
 //     8888888P"  8P""YP"Y8888P"  P' "YY8P8P88P      Y8
 
 fn main() {
-    simple_logging::log_to_file("target/out.log", log::LevelFilter::Info).unwrap();
+    simple_logging::log_to_file("target/out.log", log::LevelFilter::Info)
+        .expect("unable to set up logging");
 
     // Enhance the panic hook to handle re-setting the terminal
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        terminal::teardown().unwrap();
+        terminal::teardown().expect("unable to reset terminal");
         default_panic(info);
 
         // Ensure the process is exited if a thread panics
         std::process::exit(1);
     }));
 
-    terminal::setup_alternate_screen().unwrap();
+    terminal::setup_alternate_screen().expect("unable to setup terminal");
 
     // Initialize State
     let (state, rx) = {
@@ -49,8 +50,8 @@ fn main() {
     run_input_loop(state);
 
     // Wait for the worker thread to finish
-    worker.join().unwrap();
+    worker.join().expect("worker thread panicked");
 
     // Clean up the terminal
-    terminal::teardown().unwrap();
+    terminal::teardown().expect("unable to reset terminal");
 }
