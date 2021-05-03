@@ -5,11 +5,9 @@ use crossterm::cursor;
 use crossterm::style::{Print, SetBackgroundColor as Bg, SetForegroundColor as Fg};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{ExecutableCommand, QueueableCommand};
-use url::Url;
 
 use crate::gemini::gemtext::Line;
-use crate::gemini::StatusCode;
-use crate::state;
+use crate::state::{self, StatusLineContext};
 
 pub mod colors;
 
@@ -57,10 +55,9 @@ impl Terminal {
     pub fn render_page(
         current_line_index: usize,
         content: Option<String>,
-        url: &Option<Url>,
-        status_code: &Option<StatusCode>,
         scroll_offset: u16,
         mode: &state::Mode,
+        status_line_context: StatusLineContext,
     ) -> crossterm::Result<()> {
         let mut terminal = Terminal::new().unwrap();
 
@@ -96,7 +93,7 @@ impl Terminal {
             buffer.clear();
         }
 
-        terminal.draw_status_line(url, status_code);
+        terminal.draw_status_line(status_line_context);
 
         stdout().flush()?;
 
@@ -170,9 +167,19 @@ impl Terminal {
         Ok(Render::Continue(rows))
     }
 
-    fn draw_status_line(&mut self, url: &Option<Url>, status_code: &Option<StatusCode>) {
+    fn draw_status_line(&mut self, status_line_context: StatusLineContext) {
         self.cursor_pos.x = 1;
         self.cursor_pos.y = self.height;
+
+        let status_code = status_line_context
+            .status_code
+            .map(|s| s.code())
+            .unwrap_or_else(|| "--".to_string());
+
+        let url = status_line_context
+            .url
+            .map(|u| u.to_string())
+            .unwrap_or_else(|| "-".to_string());
 
         print!(
             "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
@@ -181,14 +188,8 @@ impl Terminal {
             bg_1 = Bg(colors::COSTA_DEL_SOL),
             fg_2 = Fg(colors::FOREGROUND),
             bg_2 = Bg(colors::BACKGROUND),
-            status_code = status_code
-                .as_ref()
-                .map(|s| s.code())
-                .unwrap_or_else(|| "--".to_string()),
-            url = url
-                .as_ref()
-                .map(|u| u.to_string())
-                .unwrap_or_else(|| "-".to_string()),
+            status_code = status_code,
+            url = url,
             width = self.width as usize - 5
         );
     }

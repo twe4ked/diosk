@@ -138,14 +138,29 @@ impl State {
     }
 
     pub fn render_page(&mut self) {
+        let status_line_context = StatusLineContext::new_from_state(&self);
+
         Terminal::render_page(
             self.current_line_index,
             self.content.clone(),
-            &self.current_url,
-            &self.last_status_code,
             self.scroll_offset,
-            &self.mode.clone(),
+            &self.mode,
+            status_line_context,
         )
         .unwrap();
+    }
+}
+
+pub struct StatusLineContext {
+    pub status_code: Option<StatusCode>,
+    pub url: Option<Url>,
+}
+
+impl StatusLineContext {
+    fn new_from_state(state: &State) -> Self {
+        Self {
+            status_code: state.last_status_code.clone(),
+            url: state.current_url.clone(),
+        }
     }
 }
