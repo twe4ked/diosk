@@ -1,7 +1,5 @@
 use std::sync::{mpsc, Arc, Mutex};
 
-use log::LevelFilter;
-
 use diosk::input::run as run_input_loop;
 use diosk::state::{Event, State};
 use diosk::terminal;
@@ -19,7 +17,7 @@ use diosk::worker::Worker;
 //     8888888P"  8P""YP"Y8888P"  P' "YY8P8P88P      Y8
 
 fn main() {
-    simple_logging::log_to_file("target/out.log", LevelFilter::Info).unwrap();
+    simple_logging::log_to_file("target/out.log", log::LevelFilter::Info).unwrap();
 
     // Enhance the panic hook to handle re-setting the terminal
     let default_panic = std::panic::take_hook();
