@@ -33,11 +33,6 @@ pub struct Terminal {
     current_row: u16,
 }
 
-enum Render {
-    Continue(u16),
-    Break,
-}
-
 impl Terminal {
     pub fn new() -> crossterm::Result<Self> {
         let (width, height) = terminal::size()?;
@@ -67,16 +62,18 @@ impl Terminal {
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
 
-            match self.render_line(&mut buffer, line, is_active)? {
-                Render::Continue(r) => {
-                    // How many rows the line took up
-                    row += r;
+            let r = self.render_line(&mut buffer, line, is_active)?;
 
-                    if row >= start_printing_from_row {
-                        stdout().write_all(&buffer).unwrap();
-                    }
-                }
-                Render::Break => break,
+            // How many rows the line took up
+            row += r;
+
+            // If we're going to overflow the screen, stop printing
+            if (self.cursor_pos.y - r) > self.page_rows() {
+                break;
+            }
+
+            if row >= start_printing_from_row {
+                stdout().write_all(&buffer).unwrap();
             }
 
             if is_active {
@@ -98,7 +95,7 @@ impl Terminal {
         buffer: &mut Vec<u8>,
         line: &str,
         is_active: bool,
-    ) -> crossterm::Result<Render> {
+    ) -> crossterm::Result<u16> {
         let mut rows = 0;
 
         // Highlight the current line
@@ -111,11 +108,6 @@ impl Terminal {
         match Line::parse(line) {
             Line::Normal => {
                 for mut part in textwrap::wrap(line, self.width as usize) {
-                    // If we're going to overflow the screen, stop printing
-                    if self.cursor_pos.y + 1 > self.height {
-                        return Ok(Render::Break);
-                    }
-
                     // If we've got a blank line, render a space so we can
                     // see it when it's highlighted
                     if line.is_empty() {
@@ -134,11 +126,6 @@ impl Terminal {
                 }
             }
             Line::Link { url, name } => {
-                // If we're going to overflow the screen, stop printing
-                if self.cursor_pos.y + 1 > self.height {
-                    return Ok(Render::Break);
-                }
-
                 // TODO: Handle wrapping
                 buffer
                     .queue(self.cursor_pos.move_to())?
@@ -157,7 +144,7 @@ impl Terminal {
             }
         }
 
-        Ok(Render::Continue(rows))
+        Ok(rows)
     }
 
     fn draw_status_line(&mut self, status_line_context: StatusLineContext) {
