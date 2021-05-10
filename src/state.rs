@@ -24,6 +24,7 @@ pub enum Mode {
 
 pub struct State {
     pub current_line_index: usize,
+    current_row: u16,
     pub content: Option<String>,
     pub mode: Mode,
     pub tx: mpsc::Sender<Event>,
@@ -54,6 +55,7 @@ impl State {
     fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {
         Self {
             current_line_index: 0,
+            current_row: 1,
             content: None,
             current_url: None,
             last_status_code: None,
@@ -89,7 +91,7 @@ impl State {
         let next_line = self.line(self.current_line_index);
         let next_line_rows = terminal.line_wrapped_rows(&next_line);
 
-        if terminal.current_row() + next_line_rows > terminal.page_rows() {
+        if self.current_row + next_line_rows > terminal.page_rows() {
             self.scroll_offset += next_line_rows;
         }
 
@@ -132,7 +134,7 @@ impl State {
         let status_line_context = StatusLineContext::new_from_state(&self);
         let mut terminal = Terminal::new().unwrap();
 
-        terminal
+        self.current_row = terminal
             .render_page(
                 self.current_line_index,
                 self.content(),

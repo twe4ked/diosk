@@ -30,7 +30,6 @@ pub struct Terminal {
     width: u16,
     height: u16,
     cursor_pos: CursorPosition,
-    current_row: u16,
 }
 
 impl Terminal {
@@ -43,7 +42,6 @@ impl Terminal {
             width,
             height,
             cursor_pos: CursorPosition { x: 1, y: 1 }, // 1-based
-            current_row: 1,
         })
     }
 
@@ -53,11 +51,14 @@ impl Terminal {
         content: String,
         scroll_offset: u16,
         status_line_context: StatusLineContext,
-    ) -> crossterm::Result<()> {
+    ) -> crossterm::Result<u16> {
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
-
         let mut buffer = Vec::new();
+
+        // The return value represents the row that the cursor is on, indexed from the top of the
+        // screen
+        let mut current_row = None;
 
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
@@ -77,7 +78,7 @@ impl Terminal {
             }
 
             if is_active {
-                self.current_row = row;
+                current_row = Some(row);
             }
 
             buffer.clear();
@@ -87,7 +88,7 @@ impl Terminal {
 
         stdout().flush()?;
 
-        Ok(())
+        Ok(current_row.expect("no current row"))
     }
 
     fn render_line(
@@ -182,11 +183,6 @@ impl Terminal {
     pub fn page_rows(&self) -> u16 {
         // -1 for the status row
         self.height - 1
-    }
-
-    /// Represents the row that the cursor is on (indexed from the top of the screen)
-    pub fn current_row(&self) -> u16 {
-        self.current_row
     }
 
     pub fn clear_screen() -> crossterm::Result<()> {
