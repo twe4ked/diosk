@@ -102,18 +102,9 @@ impl State {
             return;
         }
 
-        self.current_line_index -= 1;
-
-        let terminal = Terminal::new().unwrap();
-
-        let prev_line = self.line(self.current_line_index);
-        let prev_line_rows = terminal.line_wrapped_rows(&prev_line);
-
-        if terminal.current_row() - prev_line_rows == 0 {
-            self.scroll_offset -= prev_line_rows;
-        }
-
         self.tx.send(Event::Redraw).unwrap();
+
+        unimplemented!();
     }
 
     pub fn go(&mut self) {
