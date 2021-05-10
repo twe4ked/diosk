@@ -53,13 +53,12 @@ impl Terminal {
     }
 
     pub fn render_page(
+        &mut self,
         current_line_index: usize,
         content: String,
         scroll_offset: u16,
         status_line_context: StatusLineContext,
     ) -> crossterm::Result<()> {
-        let mut terminal = Terminal::new().unwrap();
-
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
 
@@ -68,7 +67,7 @@ impl Terminal {
         for (i, line) in content.lines().enumerate() {
             let is_active = current_line_index == i;
 
-            match terminal.render_line(&mut buffer, line, is_active)? {
+            match self.render_line(&mut buffer, line, is_active)? {
                 Render::Continue(r) => {
                     // How many rows the line took up
                     row += r;
@@ -81,13 +80,13 @@ impl Terminal {
             }
 
             if is_active {
-                terminal.current_row = row;
+                self.current_row = row;
             }
 
             buffer.clear();
         }
 
-        terminal.draw_status_line(status_line_context);
+        self.draw_status_line(status_line_context);
 
         stdout().flush()?;
 

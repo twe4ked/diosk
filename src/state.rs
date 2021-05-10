@@ -139,14 +139,16 @@ impl State {
 
     pub fn render_page(&mut self) {
         let status_line_context = StatusLineContext::new_from_state(&self);
+        let mut terminal = Terminal::new().unwrap();
 
-        Terminal::render_page(
-            self.current_line_index,
-            self.content(),
-            self.scroll_offset,
-            status_line_context,
-        )
-        .unwrap();
+        terminal
+            .render_page(
+                self.current_line_index,
+                self.content(),
+                self.scroll_offset,
+                status_line_context,
+            )
+            .unwrap();
     }
 
     fn content(&self) -> String {
