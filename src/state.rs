@@ -79,10 +79,6 @@ impl State {
             .expect("current line not found")
     }
 
-    fn current_line(&self) -> &str {
-        self.line(self.current_line_index)
-    }
-
     pub fn down(&mut self) {
         self.current_line_index += 1;
 
@@ -119,12 +115,12 @@ impl State {
     }
 
     pub fn enter(&mut self) {
-        let line = self.current_line();
+        let line = &self.content()[self.current_line_index];
 
-        if let Line::Link { url, .. } = Line::parse(line) {
+        if let Line::Link { url, .. } = line {
             // Navigate
             self.mode = Mode::Loading;
-            self.tx.send(Event::Navigate(url)).unwrap();
+            self.tx.send(Event::Navigate(url.to_string())).unwrap();
         } else {
             // Nothing to do on non-link lines
         }
@@ -144,11 +140,15 @@ impl State {
             .unwrap();
     }
 
-    fn content(&self) -> String {
-        self.content.clone().unwrap_or_else(|| match &self.mode {
-            Mode::Loading => "Loading...".to_string(),
-            s => unimplemented!("not content for state: {:?}", s),
-        })
+    // TODO: Store parsed lines directly on Self
+    fn content(&self) -> Vec<Line> {
+        self.content
+            .as_ref()
+            .map(|c| c.lines().map(Line::parse).collect())
+            .unwrap_or_else(|| match &self.mode {
+                Mode::Loading => vec![Line::Normal("Loading...".to_string())],
+                s => unimplemented!("not content for state: {:?}", s),
+            })
     }
 }
 

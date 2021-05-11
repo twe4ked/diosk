@@ -1,7 +1,7 @@
 // https://gemini.circumlunar.space/docs/gemtext.gmi
 
 pub enum Line {
-    Normal,
+    Normal(String),
     Link { url: String, name: Option<String> },
 }
 
@@ -44,7 +44,7 @@ impl Line {
 
             Line::Link { url, name }
         } else {
-            Line::Normal
+            Line::Normal(line.to_string())
         }
     }
 }

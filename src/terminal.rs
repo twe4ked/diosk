@@ -49,7 +49,7 @@ impl Terminal {
     pub fn render_page(
         &mut self,
         current_line_index: usize,
-        content: String,
+        content: Vec<Line>,
         scroll_offset: u16,
         status_line_context: StatusLineContext,
     ) -> crossterm::Result<u16> {
@@ -60,7 +60,7 @@ impl Terminal {
         // screen
         let mut current_row = None;
 
-        for (i, line) in content.lines().enumerate() {
+        for (i, line) in content.iter().enumerate() {
             let is_active = current_line_index == i;
 
             let rows = self.render_line(line, is_active)?;
@@ -98,7 +98,7 @@ impl Terminal {
         Ok(current_row.expect("no current row"))
     }
 
-    fn render_line(&mut self, line: &str, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {
+    fn render_line(&mut self, line: &Line, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {
         let mut rows = Vec::new();
 
         // Highlight the current line
@@ -108,12 +108,12 @@ impl Terminal {
             Bg(colors::BACKGROUND)
         };
 
-        match Line::parse(line) {
-            Line::Normal => {
-                for mut part in textwrap::wrap(line, self.width as usize) {
+        match line {
+            Line::Normal(content) => {
+                for mut part in textwrap::wrap(&content, self.width as usize) {
                     // If we've got a blank line, render a space so we can
                     // see it when it's highlighted
-                    if line.is_empty() {
+                    if content.is_empty() {
                         part = Cow::from(" ");
                     }
 
@@ -137,7 +137,7 @@ impl Terminal {
                     .queue(Fg(colors::MANTIS))?
                     .queue(Print("=> "))?
                     .queue(Fg(colors::FOREGROUND))?
-                    .queue(Print(name.unwrap_or_else(|| url.clone())))?
+                    .queue(Print(name.as_ref().unwrap_or_else(|| url)))?
                     .queue(Fg(colors::REGENT_GREY))?
                     .queue(Print(" "))?
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
