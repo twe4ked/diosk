@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
@@ -54,18 +55,16 @@ impl Terminal {
     ) -> crossterm::Result<u16> {
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
-        let mut buffer = Vec::new();
 
         // The return value represents the row that the cursor is on, indexed from the top of the
         // screen
         let mut current_row = None;
 
         for (i, line) in content.lines().enumerate() {
-            buffer.clear();
-
             let is_active = current_line_index == i;
 
-            let r = self.render_line(&mut buffer, line, is_active)?;
+            let rows = self.render_line(line, is_active)?;
+            let r = u16::try_from(rows.len()).expect("rows too large for u16");
 
             // How many rows the line took up
             row += r;
@@ -87,7 +86,9 @@ impl Terminal {
                 break;
             }
 
-            stdout().write_all(&buffer).unwrap();
+            for row in rows {
+                stdout().write_all(&row).unwrap();
+            }
         }
 
         self.draw_status_line(status_line_context);
@@ -97,13 +98,8 @@ impl Terminal {
         Ok(current_row.expect("no current row"))
     }
 
-    fn render_line(
-        &mut self,
-        buffer: &mut Vec<u8>,
-        line: &str,
-        is_active: bool,
-    ) -> crossterm::Result<u16> {
-        let mut rows = 0;
+    fn render_line(&mut self, line: &str, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {
+        let mut rows = Vec::new();
 
         // Highlight the current line
         let bg_color = if is_active {
@@ -121,21 +117,22 @@ impl Terminal {
                         part = Cow::from(" ");
                     }
 
-                    buffer
-                        .queue(self.cursor_pos.move_to())?
+                    let mut row = Vec::new();
+                    row.queue(self.cursor_pos.move_to())?
                         .queue(Fg(colors::FOREGROUND))?
                         .queue(bg_color)?
                         .queue(Print(part))?;
+                    rows.push(row);
 
-                    rows += 1;
                     self.cursor_pos.x = 1;
                     self.cursor_pos.y += 1;
                 }
             }
             Line::Link { url, name } => {
                 // TODO: Handle wrapping
-                buffer
-                    .queue(self.cursor_pos.move_to())?
+
+                let mut row = Vec::new();
+                row.queue(self.cursor_pos.move_to())?
                     .queue(bg_color)?
                     .queue(Fg(colors::MANTIS))?
                     .queue(Print("=> "))?
@@ -144,8 +141,8 @@ impl Terminal {
                     .queue(Fg(colors::REGENT_GREY))?
                     .queue(Print(" "))?
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
+                rows.push(row);
 
-                rows += 1;
                 self.cursor_pos.x = 1;
                 self.cursor_pos.y += 1;
             }
