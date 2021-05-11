@@ -196,12 +196,6 @@ impl Terminal {
 
         Ok(())
     }
-
-    pub fn flush() -> crossterm::Result<()> {
-        stdout().flush()?;
-
-        Ok(())
-    }
 }
 
 pub fn setup_alternate_screen() -> crossterm::Result<()> {

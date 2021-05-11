@@ -4,7 +4,6 @@ use crossterm::event::{read, Event as TermEvent, KeyCode};
 use log::info;
 
 use crate::state::{Mode, State};
-use crate::terminal::Terminal;
 
 pub fn run(state: Arc<Mutex<State>>) {
     loop {
@@ -35,8 +34,6 @@ pub fn run(state: Arc<Mutex<State>>) {
 
                     Mode::Input => todo!(),
                 }
-
-                Terminal::flush().unwrap();
 
                 info!("{:?}", &state);
             }
