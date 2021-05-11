@@ -187,15 +187,15 @@ impl Terminal {
         // -1 for the status row
         self.height - 1
     }
+}
 
-    pub fn clear_screen() -> crossterm::Result<()> {
-        stdout()
-            .execute(terminal::Clear(terminal::ClearType::All))?
-            .execute(Bg(colors::BACKGROUND))?
-            .execute(cursor::MoveTo(1, 1))?;
+pub fn clear_screen() -> crossterm::Result<()> {
+    stdout()
+        .execute(terminal::Clear(terminal::ClearType::All))?
+        .execute(Bg(colors::BACKGROUND))?
+        .execute(cursor::MoveTo(1, 1))?;
 
-        Ok(())
-    }
+    Ok(())
 }
 
 pub fn setup_alternate_screen() -> crossterm::Result<()> {
