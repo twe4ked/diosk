@@ -19,10 +19,8 @@ struct CursorPosition {
 }
 
 impl CursorPosition {
-    // TODO: We might want to switch to using 0 based indexes,
-    // since that's what crossterm deals with
     fn move_to(&self) -> cursor::MoveTo {
-        cursor::MoveTo(self.x - 1, self.y - 1)
+        cursor::MoveTo(self.x, self.y)
     }
 }
 
@@ -30,7 +28,6 @@ impl CursorPosition {
 pub struct Terminal {
     width: u16,
     height: u16,
-    cursor_pos: CursorPosition,
 }
 
 impl Terminal {
@@ -39,15 +36,11 @@ impl Terminal {
 
         stdout().queue(cursor::MoveTo(1, 1))?;
 
-        Ok(Self {
-            width,
-            height,
-            cursor_pos: CursorPosition { x: 1, y: 1 }, // 1-based
-        })
+        Ok(Self { width, height })
     }
 
     pub fn render_page(
-        &mut self,
+        &self,
         current_line_index: usize,
         content: Vec<Line>,
         scroll_offset: u16,
@@ -55,6 +48,8 @@ impl Terminal {
     ) -> crossterm::Result<u16> {
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
+
+        let mut cursor_pos = CursorPosition { x: 0, y: 0 };
 
         // The return value represents the row that the cursor is on, indexed from the top of the
         // screen
@@ -72,7 +67,7 @@ impl Terminal {
             // Don't print before we're in view
             if row < start_printing_from_row {
                 // Reset the cursor position because we haven't drawn anything to the screen yet
-                self.cursor_pos.y = 1;
+                cursor_pos.y = 0;
                 continue;
             }
 
@@ -82,12 +77,16 @@ impl Terminal {
             }
 
             // If we're going to overflow the screen, stop printing
-            if (self.cursor_pos.y - r) > self.page_rows() {
+            if cursor_pos.y > self.page_rows() + r {
                 break;
             }
 
             for row in rows {
+                stdout().queue(&cursor_pos.move_to())?;
                 stdout().write_all(&row).unwrap();
+
+                cursor_pos.x = 0;
+                cursor_pos.y += 1;
             }
         }
 
@@ -98,7 +97,7 @@ impl Terminal {
         Ok(current_row.expect("no current row"))
     }
 
-    fn render_line(&mut self, line: &Line, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {
+    fn render_line(&self, line: &Line, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {
         let mut rows = Vec::new();
 
         // Highlight the current line
@@ -118,22 +117,17 @@ impl Terminal {
                     }
 
                     let mut row = Vec::new();
-                    row.queue(self.cursor_pos.move_to())?
-                        .queue(Fg(colors::FOREGROUND))?
+                    row.queue(Fg(colors::FOREGROUND))?
                         .queue(bg_color)?
                         .queue(Print(part))?;
                     rows.push(row);
-
-                    self.cursor_pos.x = 1;
-                    self.cursor_pos.y += 1;
                 }
             }
             Line::Link { url, name } => {
                 // TODO: Handle wrapping
 
                 let mut row = Vec::new();
-                row.queue(self.cursor_pos.move_to())?
-                    .queue(bg_color)?
+                row.queue(bg_color)?
                     .queue(Fg(colors::MANTIS))?
                     .queue(Print("=> "))?
                     .queue(Fg(colors::FOREGROUND))?
@@ -142,19 +136,13 @@ impl Terminal {
                     .queue(Print(" "))?
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
                 rows.push(row);
-
-                self.cursor_pos.x = 1;
-                self.cursor_pos.y += 1;
             }
         }
 
         Ok(rows)
     }
 
-    fn draw_status_line(&mut self, status_line_context: StatusLineContext) {
-        self.cursor_pos.x = 1;
-        self.cursor_pos.y = self.height;
-
+    fn draw_status_line(&self, status_line_context: StatusLineContext) {
         let status_code = status_line_context
             .status_code
             .map(|s| s.code())
@@ -167,7 +155,7 @@ impl Terminal {
 
         print!(
             "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
-            cursor_pos = self.cursor_pos.move_to(),
+            cursor_pos = cursor::MoveTo(0, self.height - 1),
             fg_1 = Fg(colors::GREEN_SMOKE),
             bg_1 = Bg(colors::COSTA_DEL_SOL),
             fg_2 = Fg(colors::FOREGROUND),

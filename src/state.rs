@@ -128,7 +128,7 @@ impl State {
 
     pub fn render_page(&mut self) {
         let status_line_context = StatusLineContext::new_from_state(&self);
-        let mut terminal = Terminal::new().unwrap();
+        let terminal = Terminal::new().unwrap();
 
         self.current_row = terminal
             .render_page(
