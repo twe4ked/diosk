@@ -61,6 +61,8 @@ impl Terminal {
         let mut current_row = None;
 
         for (i, line) in content.lines().enumerate() {
+            buffer.clear();
+
             let is_active = current_line_index == i;
 
             let r = self.render_line(&mut buffer, line, is_active)?;
@@ -68,20 +70,24 @@ impl Terminal {
             // How many rows the line took up
             row += r;
 
+            // Don't print before we're in view
+            if row < start_printing_from_row {
+                // Reset the cursor position because we haven't drawn anything to the screen yet
+                self.cursor_pos.y = 1;
+                continue;
+            }
+
+            // TODO: Move this down once scrolling is row-by-row
+            if is_active {
+                current_row = Some(row);
+            }
+
             // If we're going to overflow the screen, stop printing
             if (self.cursor_pos.y - r) > self.page_rows() {
                 break;
             }
 
-            if row >= start_printing_from_row {
-                stdout().write_all(&buffer).unwrap();
-            }
-
-            if is_active {
-                current_row = Some(row);
-            }
-
-            buffer.clear();
+            stdout().write_all(&buffer).unwrap();
         }
 
         self.draw_status_line(status_line_context);
