@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crossterm::event::{read, Event as TermEvent, KeyCode};
+use crossterm::event::{read, Event, KeyCode};
 use log::info;
 
 use crate::state::{Mode, State};
@@ -8,7 +8,7 @@ use crate::state::{Mode, State};
 pub fn run(state: Arc<Mutex<State>>) {
     loop {
         match read().unwrap() {
-            TermEvent::Key(event) => {
+            Event::Key(event) => {
                 let mut state = state.lock().expect("poisoned");
                 let mode = state.mode.clone();
 
@@ -37,8 +37,8 @@ pub fn run(state: Arc<Mutex<State>>) {
 
                 info!("{:?}", &state);
             }
-            TermEvent::Mouse(event) => info!("{:?}", event),
-            TermEvent::Resize(width, height) => info!("New size {}x{}", width, height),
+            Event::Mouse(event) => info!("{:?}", event),
+            Event::Resize(width, height) => info!("New size {}x{}", width, height),
         }
     }
 }
