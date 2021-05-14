@@ -70,25 +70,13 @@ impl State {
         self.tx.send(Event::Navigate(url)).unwrap();
     }
 
-    fn line(&self, index: usize) -> &str {
-        self.content
-            .as_ref()
-            .unwrap()
-            .lines()
-            .nth(index as usize)
-            .expect("current line not found")
-    }
-
     pub fn down(&mut self) {
         self.current_line_index += 1;
 
+        // Check if we need to scroll
         let terminal = Terminal::new().unwrap();
-
-        let next_line = self.line(self.current_line_index);
-        let next_line_rows = terminal.line_wrapped_rows(&next_line);
-
-        if self.current_row + next_line_rows > terminal.page_rows() {
-            self.scroll_offset += next_line_rows;
+        if self.current_row >= terminal.page_rows() {
+            self.scroll_offset += 1;
         }
 
         self.tx.send(Event::Redraw).unwrap();

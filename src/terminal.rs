@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::convert::TryFrom;
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
@@ -59,31 +58,28 @@ impl Terminal {
             let is_active = current_line_index == i;
 
             let rows = self.render_line(line, is_active)?;
-            let r = u16::try_from(rows.len()).expect("rows too large for u16");
+            for row_buffer in rows {
+                row += 1;
 
-            // How many rows the line took up
-            row += r;
+                // Don't print before we're in view
+                if row < start_printing_from_row {
+                    // Reset the cursor position because we haven't drawn anything to the screen yet
+                    cursor_pos.y = 0;
+                    continue;
+                }
 
-            // Don't print before we're in view
-            if row < start_printing_from_row {
-                // Reset the cursor position because we haven't drawn anything to the screen yet
-                cursor_pos.y = 0;
-                continue;
-            }
+                // TODO: Move this down once scrolling is row-by-row
+                if is_active {
+                    current_row = Some(row);
+                }
 
-            // TODO: Move this down once scrolling is row-by-row
-            if is_active {
-                current_row = Some(row);
-            }
+                // If we're going to overflow the screen, stop printing
+                if cursor_pos.y > self.page_rows() + 1 {
+                    break;
+                }
 
-            // If we're going to overflow the screen, stop printing
-            if cursor_pos.y > self.page_rows() + r {
-                break;
-            }
-
-            for row in rows {
                 stdout().queue(&cursor_pos.move_to())?;
-                stdout().write_all(&row).unwrap();
+                stdout().write_all(&row_buffer).unwrap();
 
                 cursor_pos.x = 0;
                 cursor_pos.y += 1;
