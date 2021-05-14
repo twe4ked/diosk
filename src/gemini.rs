@@ -49,6 +49,10 @@ pub enum StatusCode {
         code: String,
         url: Option<String>,
     },
+    PermanentFailure {
+        code: String,
+        meta: String,
+    },
 }
 
 #[derive(Error, Debug)]
@@ -85,9 +89,16 @@ impl StatusCode {
                 Ok(StatusCode::Redirect { code, url })
             }
             Some('4') => {
-                // The contents of <META> may provide additional information on the failure, and should be
-                // displayed to human users
+                // The contents of <META> may provide additional information on the failure, and
+                // should be displayed to human users
                 Ok(StatusCode::TemporaryFailure { code })
+            }
+            Some('5') => {
+                // The contents of <META> may provide additional information on the failure, and
+                // should be displayed to human users
+                let meta: String = parts.collect();
+                let meta = meta.trim().to_string();
+                Ok(StatusCode::PermanentFailure { code, meta })
             }
             Some(s) => panic!("invalid status code: {}", s),
             _ => Err(StatusCodeParseError {}),
@@ -99,6 +110,7 @@ impl StatusCode {
             StatusCode::Success { code, .. } => code,
             StatusCode::TemporaryFailure { code } => code,
             StatusCode::Redirect { code, .. } => code,
+            StatusCode::PermanentFailure { code, .. } => code,
         }
         .clone()
     }
@@ -122,6 +134,8 @@ pub enum TransactionError {
     IoError(#[from] io::Error),
     #[error("status code parse error")]
     StatusCodeParseError(#[from] StatusCodeParseError),
+    #[error("permanent failure: {0} {1}")]
+    PermanentFailure(String, String),
 }
 
 pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
@@ -194,6 +208,9 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
             }
         }
         StatusCode::TemporaryFailure { .. } => todo!(),
+        StatusCode::PermanentFailure { code, meta } => {
+            Err(TransactionError::PermanentFailure(code, meta))
+        }
         StatusCode::Redirect { code: _, url } => {
             // > A user agent SHOULD NOT automatically redirect a request more than 5 times, since
             // > such redirections usually indicate an infinite loop.
@@ -218,6 +235,7 @@ mod tests {
         assert!(StatusCode::parse(&"20 text/plain\r\n").is_ok());
         assert!(StatusCode::parse(&"20").is_ok());
         assert!(StatusCode::parse(&"30").is_ok());
+        assert!(StatusCode::parse(&"50").is_ok());
 
         assert!(StatusCode::parse(&"").is_err());
     }

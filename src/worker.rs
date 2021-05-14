@@ -54,8 +54,8 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
                         }
                         Response::RedirectLoop(_url) => todo!("handle redirect loops"),
                     },
-                    Err(_) => {
-                        info!("transaction error");
+                    Err(e) => {
+                        info!("transaction error: {}", e);
 
                         state.mode = Mode::Normal;
                         continue;
