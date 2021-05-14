@@ -138,7 +138,11 @@ pub enum TransactionError {
     PermanentFailure(String, String),
 }
 
-pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
+pub fn transaction(url: &Url) -> Result<Response, TransactionError> {
+    transaction_inner(url, 0)
+}
+
+fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
     let host = url.host_str().expect("no host");
 
     let config = new_config();
@@ -221,7 +225,7 @@ pub fn transaction(url: &Url, redirect_count: usize) -> Result<Response, Transac
 
             let url =
                 Url::parse(&url.expect("missing redirect URL")).expect("invalid redirect URL");
-            transaction(&url, redirect_count + 1)
+            transaction_inner(&url, redirect_count + 1)
         }
     }
 }

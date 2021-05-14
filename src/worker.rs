@@ -42,7 +42,7 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
 
                 info!("navigating to: {}", &url);
 
-                match transaction(&url, 0) {
+                match transaction(&url) {
                     Ok(response) => match response {
                         Response::Body {
                             content,
