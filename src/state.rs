@@ -37,6 +37,7 @@ impl fmt::Debug for State {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("State")
             .field("current_line_index", &self.current_line_index)
+            .field("current_row", &self.current_row)
             .field("mode", &self.mode)
             .field("current_url", &self.current_url)
             .field("scroll_offset", &self.scroll_offset)
