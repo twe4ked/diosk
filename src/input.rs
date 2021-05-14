@@ -35,6 +35,8 @@ pub fn run(state: Arc<Mutex<State>>) {
                     Mode::Input => todo!(),
                 }
 
+                state.clear_error_message();
+
                 info!("{:?}", &state);
             }
             Event::Mouse(event) => info!("{:?}", event),

@@ -145,6 +145,10 @@ impl State {
     pub fn set_error_message(&mut self, message: String) {
         self.error_message = Some(message);
     }
+
+    pub fn clear_error_message(&mut self) {
+        self.error_message = None;
+    }
 }
 
 pub struct StatusLineContext {
