@@ -31,6 +31,7 @@ pub struct State {
     pub current_url: Option<Url>,
     pub last_status_code: Option<StatusCode>,
     pub scroll_offset: u16,
+    error_message: Option<String>,
 }
 
 impl fmt::Debug for State {
@@ -63,6 +64,7 @@ impl State {
             mode: Mode::Normal,
             tx,
             scroll_offset: 0,
+            error_message: None,
         }
     }
 
@@ -139,11 +141,16 @@ impl State {
                 s => unimplemented!("not content for state: {:?}", s),
             })
     }
+
+    pub fn set_error_message(&mut self, message: String) {
+        self.error_message = Some(message);
+    }
 }
 
 pub struct StatusLineContext {
     pub status_code: Option<StatusCode>,
     pub url: Option<Url>,
+    pub error_message: Option<String>,
 }
 
 impl StatusLineContext {
@@ -151,6 +158,7 @@ impl StatusLineContext {
         Self {
             status_code: state.last_status_code.clone(),
             url: state.current_url.clone(),
+            error_message: state.error_message.clone(),
         }
     }
 }

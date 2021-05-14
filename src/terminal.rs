@@ -144,20 +144,25 @@ impl Terminal {
             .map(|s| s.code())
             .unwrap_or_else(|| "--".to_string());
 
-        let url = status_line_context
-            .url
-            .map(|u| u.to_string())
-            .unwrap_or_else(|| "-".to_string());
+        let (fg_1, bg_1, message) = if let Some(error_message) = status_line_context.error_message {
+            (Fg(colors::TEMPTRESS), Bg(colors::OLD_BRICK), error_message)
+        } else {
+            let url = status_line_context
+                .url
+                .map(|u| u.to_string())
+                .unwrap_or_else(|| "-".to_string());
+            (Fg(colors::GREEN_SMOKE), Bg(colors::COSTA_DEL_SOL), url)
+        };
 
         print!(
-            "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {url:width$}",
+            "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {message:width$}",
             cursor_pos = cursor::MoveTo(0, self.height - 1),
-            fg_1 = Fg(colors::GREEN_SMOKE),
-            bg_1 = Bg(colors::COSTA_DEL_SOL),
+            fg_1 = fg_1,
+            bg_1 = bg_1,
             fg_2 = Fg(colors::FOREGROUND),
             bg_2 = Bg(colors::BACKGROUND),
             status_code = status_code,
-            url = url,
+            message = message,
             width = self.width as usize - 5
         );
     }

@@ -48,6 +48,9 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
                             content,
                             status_code,
                         } => {
+                            // Move the current line back to the top of the page
+                            state.current_line_index = 0;
+
                             state.content = content;
                             state.current_url = Some(url);
                             state.last_status_code = Some(status_code);
@@ -56,14 +59,9 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
                     },
                     Err(e) => {
                         info!("transaction error: {}", e);
-
-                        state.mode = Mode::Normal;
-                        continue;
+                        state.set_error_message(e.to_string());
                     }
                 }
-
-                // Move the current line back to the top of the page
-                state.current_line_index = 0;
 
                 terminal::clear_screen().unwrap();
 
