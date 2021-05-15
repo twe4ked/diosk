@@ -10,7 +10,7 @@ use crate::terminal::Terminal;
 
 #[derive(Debug)]
 pub enum Event {
-    Navigate(String),
+    Navigate(Url),
     Terminate,
     Redraw,
     TransactionComplete(Response, Url),
@@ -70,7 +70,8 @@ impl State {
         }
     }
 
-    pub fn request(&mut self, url: String) {
+    pub fn request(&mut self, url_or_path: String) {
+        let url = self.qualify_url(&url_or_path);
         self.mode = Mode::Loading;
         self.tx.send(Event::Navigate(url)).unwrap();
     }
@@ -117,8 +118,9 @@ impl State {
 
         if let Line::Link { url, .. } = line {
             // Navigate
+            let url = self.qualify_url(&url);
             self.mode = Mode::Loading;
-            self.tx.send(Event::Navigate(url.to_string())).unwrap();
+            self.tx.send(Event::Navigate(url)).unwrap();
         } else {
             // Nothing to do on non-link lines
         }
@@ -136,6 +138,22 @@ impl State {
                 status_line_context,
             )
             .unwrap();
+    }
+
+    /// Parse the URL to ensure it's valid and check if it has a base path
+    fn qualify_url(&self, url_or_path: &str) -> Url {
+        match Url::parse(&url_or_path) {
+            Ok(url) => url,
+            Err(url::ParseError::RelativeUrlWithoutBase) => {
+                // If we don't have a URL base, we clear the query/fragment and join
+                // on the requested path.
+                let mut url = self.current_url.as_ref().unwrap().clone();
+                url.set_query(None);
+                url.set_fragment(None);
+                url.join(&url_or_path).unwrap()
+            }
+            e => panic!("{:?}", e),
+        }
     }
 
     // TODO: Store parsed lines directly on Self

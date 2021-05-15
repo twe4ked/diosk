@@ -2,7 +2,6 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 use log::info;
-use url::Url;
 
 use crate::gemini::{transaction, Response};
 use crate::state::{Event, Mode, State};
@@ -29,25 +28,7 @@ fn handle_event_loop(state: Arc<Mutex<State>>, tx: mpsc::Sender<Event>, rx: mpsc
         info!("event recv: {:?}", &event);
 
         match event {
-            Event::Navigate(url_or_path) => {
-                let url = {
-                    let state = state.lock().expect("poisoned");
-
-                    // Parse the URL to ensure it's valid and check if it has a base path
-                    match Url::parse(&url_or_path) {
-                        Ok(url) => url,
-                        Err(url::ParseError::RelativeUrlWithoutBase) => {
-                            // If we don't have a URL base, we clear the query/fragment and join
-                            // on the requested path.
-                            let mut url = state.current_url.as_ref().unwrap().clone();
-                            url.set_query(None);
-                            url.set_fragment(None);
-                            url.join(&url_or_path).unwrap()
-                        }
-                        e => panic!("{:?}", e),
-                    }
-                };
-
+            Event::Navigate(url) => {
                 info!("navigating to: {}", &url);
 
                 let tx = tx.clone();
