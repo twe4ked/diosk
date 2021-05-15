@@ -6,8 +6,9 @@ use url::Url;
 
 use std::io::prelude::*;
 use std::io::{self, BufReader, ErrorKind};
-use std::net::TcpStream;
+use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::Arc;
+use std::time::Duration;
 
 pub mod gemtext;
 
@@ -149,12 +150,21 @@ fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, Trans
     let dns_name = webpki::DNSNameRef::try_from_ascii_str(&host)?;
     let mut tls_client = rustls::ClientSession::new(&Arc::new(config), dns_name);
 
+    info!("resolving domain");
+    let addrs: Vec<_> = format!("{}:{}", &host, &PORT)
+        .to_socket_addrs()
+        .expect("unable to resolve domain")
+        .collect();
+    let addr = addrs.first().expect("no domain");
+
     // C: Opens connection
     // S: Accepts connection
     // C/S: Complete TLS handshake (see section 4)
     // C: Validates server certificate (see 4.2)
-    let mut socket = TcpStream::connect(&format!("{}:{}", host, PORT))?;
+    info!("opening socket: {}:{}", &host, &PORT);
+    let mut socket = TcpStream::connect_timeout(&addr, Duration::from_secs(4))?;
 
+    info!("opening stream");
     let mut stream = rustls::Stream::new(&mut tls_client, &mut socket);
 
     // C: Sends request (one CRLF terminated line) (see section 2)
