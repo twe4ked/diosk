@@ -93,9 +93,14 @@ impl State {
             return;
         }
 
-        self.tx.send(Event::Redraw).unwrap();
+        self.current_line_index -= 1;
 
-        unimplemented!();
+        // Check if we need to scroll
+        if self.current_row == 1 {
+            self.scroll_offset -= 1;
+        }
+
+        self.tx.send(Event::Redraw).unwrap();
     }
 
     pub fn go(&mut self) {
