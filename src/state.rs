@@ -5,7 +5,7 @@ use log::info;
 use url::Url;
 
 use crate::gemini::gemtext::Line;
-use crate::gemini::StatusCode;
+use crate::gemini::{Response, StatusCode, TransactionError};
 use crate::terminal::Terminal;
 
 #[derive(Debug)]
@@ -13,6 +13,8 @@ pub enum Event {
     Navigate(String),
     Terminate,
     Redraw,
+    TransactionComplete(Response, Url),
+    TransactionError(TransactionError),
 }
 
 #[derive(Debug, Clone)]
@@ -47,11 +49,11 @@ impl fmt::Debug for State {
 }
 
 impl State {
-    pub fn new() -> (Self, mpsc::Receiver<Event>) {
+    pub fn new() -> (Self, mpsc::Sender<Event>, mpsc::Receiver<Event>) {
         // Set up a channel for State to talk to the worker thread
         let (tx, rx) = mpsc::channel();
 
-        (Self::new_with_tx(tx), rx)
+        (Self::new_with_tx(tx.clone()), tx, rx)
     }
 
     fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {

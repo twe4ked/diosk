@@ -33,18 +33,18 @@ fn main() {
     terminal::setup_alternate_screen().expect("unable to setup terminal");
 
     // Initialize State
-    let (state, rx) = {
-        let (mut state, rx) = State::new();
+    let (state, tx, rx) = {
+        let (mut state, tx, rx) = State::new();
 
         // Request and render the initial page
         state.request("gemini://gemini.circumlunar.space/software/".to_string());
         state.render_page();
 
-        (Arc::new(Mutex::new(state)), rx)
+        (Arc::new(Mutex::new(state)), tx, rx)
     };
 
     // Spawn the worker thread
-    let worker = Worker::spawn(state.clone(), rx);
+    let worker = Worker::spawn(state.clone(), tx, rx);
 
     // Run a blocking input loop
     run_input_loop(state);

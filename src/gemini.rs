@@ -119,6 +119,7 @@ impl StatusCode {
 
 const PORT: u16 = 1965;
 
+#[derive(Debug)]
 pub enum Response {
     Body {
         content: Option<String>,
