@@ -70,8 +70,8 @@ fn handle_event_loop(state: Arc<Mutex<State>>, tx: mpsc::Sender<Event>, rx: mpsc
                 }
 
                 terminal::clear_screen().unwrap();
-                state.render_page();
                 state.mode = Mode::Normal;
+                state.render_page();
             }
             Event::TransactionError(e) => {
                 info!("transaction error: {}", e);
@@ -80,8 +80,8 @@ fn handle_event_loop(state: Arc<Mutex<State>>, tx: mpsc::Sender<Event>, rx: mpsc
 
                 state.set_error_message(e.to_string());
                 terminal::clear_screen().unwrap();
-                state.render_page();
                 state.mode = Mode::Normal;
+                state.render_page();
             }
             Event::Terminate => break,
         }

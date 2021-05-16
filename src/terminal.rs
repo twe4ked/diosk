@@ -142,7 +142,7 @@ impl Terminal {
         let cursor_pos = cursor::MoveTo(0, self.height - 1);
 
         match status_line_context.mode {
-            Mode::Normal | Mode::Loading => {
+            Mode::Normal => {
                 let status_code = status_line_context
                     .status_code
                     .map(|s| s.code())
@@ -169,6 +169,17 @@ impl Terminal {
                     status_code = status_code,
                     message = message,
                     width = self.width as usize - 5
+                );
+            }
+
+            Mode::Loading => {
+                print!(
+                    "{cursor_pos}{fg_1}{bg_1} Loading... {fg_2}{bg_2}",
+                    cursor_pos = cursor_pos,
+                    fg_1 = Fg(colors::GREEN_SMOKE),
+                    bg_1 = Bg(colors::COSTA_DEL_SOL),
+                    fg_2 = Fg(colors::FOREGROUND),
+                    bg_2 = Bg(colors::BACKGROUND),
                 );
             }
 

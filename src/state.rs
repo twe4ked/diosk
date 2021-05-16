@@ -156,6 +156,8 @@ impl State {
                 self.input.clear();
             }
         }
+
+        self.tx.send(Event::Redraw).unwrap();
     }
 
     pub fn render_page(&mut self) {
@@ -193,10 +195,7 @@ impl State {
         self.content
             .as_ref()
             .map(|c| c.lines().map(Line::parse).collect())
-            .unwrap_or_else(|| match &self.mode {
-                Mode::Loading => vec![Line::Normal("Loading...".to_string())],
-                s => unimplemented!("not content for state: {:?}", s),
-            })
+            .unwrap_or_else(|| vec![Line::Normal(String::new())])
     }
 
     pub fn set_error_message(&mut self, message: String) {
