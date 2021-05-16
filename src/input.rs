@@ -13,14 +13,7 @@ pub fn run(state: Arc<Mutex<State>>) {
                 let mode = state.mode.clone();
 
                 match mode {
-                    Mode::Loading => {
-                        if let KeyCode::Char('q') = event.code {
-                            state.quit();
-                            break;
-                        }
-                    }
-
-                    Mode::Normal => match event.code {
+                    Mode::Normal | Mode::Loading => match event.code {
                         KeyCode::Char('q') => {
                             state.quit();
                             break;
