@@ -34,6 +34,7 @@ pub struct State {
     pub last_status_code: Option<StatusCode>,
     pub scroll_offset: u16,
     error_message: Option<String>,
+    input: String,
 }
 
 impl fmt::Debug for State {
@@ -67,6 +68,7 @@ impl State {
             tx,
             scroll_offset: 0,
             error_message: None,
+            input: String::new(),
         }
     }
 
@@ -104,9 +106,20 @@ impl State {
         self.tx.send(Event::Redraw).unwrap();
     }
 
-    pub fn go(&mut self) {
+    pub fn input(&mut self) {
         self.mode = Mode::Input;
-        todo!();
+        self.tx.send(Event::Redraw).unwrap();
+    }
+
+    pub fn input_char(&mut self, c: char) {
+        self.input.push(c);
+        self.tx.send(Event::Redraw).unwrap();
+    }
+
+    pub fn cancel_input_mode(&mut self) {
+        self.mode = Mode::Normal;
+        self.input.clear();
+        self.tx.send(Event::Redraw).unwrap();
     }
 
     pub fn quit(&mut self) {
@@ -114,15 +127,34 @@ impl State {
     }
 
     pub fn enter(&mut self) {
-        let line = &self.content()[self.current_line_index];
+        match self.mode {
+            Mode::Normal => {
+                let line = &self.content()[self.current_line_index];
 
-        if let Line::Link { url, .. } = line {
-            // Navigate
-            let url = self.qualify_url(&url);
-            self.mode = Mode::Loading;
-            self.tx.send(Event::Navigate(url)).unwrap();
-        } else {
-            // Nothing to do on non-link lines
+                if let Line::Link { url, .. } = line {
+                    // Navigate
+                    let url = self.qualify_url(&url);
+                    self.mode = Mode::Loading;
+                    self.tx.send(Event::Navigate(url)).unwrap();
+                } else {
+                    // Nothing to do on non-link lines
+                }
+            }
+
+            Mode::Loading => {
+                info!("enter while loading");
+            }
+
+            Mode::Input => {
+                if let Some(url) = self.input.strip_prefix("go ") {
+                    // Navigate
+                    let url = self.qualify_url(&url);
+                    self.mode = Mode::Loading;
+                    self.tx.send(Event::Navigate(url)).unwrap();
+                }
+
+                self.input.clear();
+            }
         }
     }
 
@@ -176,18 +208,22 @@ impl State {
     }
 }
 
-pub struct StatusLineContext {
+pub struct StatusLineContext<'a> {
     pub status_code: Option<StatusCode>,
     pub url: Option<Url>,
     pub error_message: Option<String>,
+    pub mode: Mode,
+    pub input: &'a str,
 }
 
-impl StatusLineContext {
-    fn new_from_state(state: &State) -> Self {
+impl<'a> StatusLineContext<'a> {
+    fn new_from_state(state: &'a State) -> Self {
         Self {
             status_code: state.last_status_code.clone(),
             url: state.current_url.clone(),
             error_message: state.error_message.clone(),
+            mode: state.mode.clone(),
+            input: &state.input,
         }
     }
 }

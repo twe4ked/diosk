@@ -18,14 +18,19 @@ pub fn run(state: Arc<Mutex<State>>) {
                             state.quit();
                             break;
                         }
-                        KeyCode::Char('g') => state.go(),
+                        KeyCode::Char(':') => state.input(),
                         KeyCode::Char('j') => state.down(),
                         KeyCode::Char('k') => state.up(),
                         KeyCode::Enter => state.enter(),
                         _ => {}
                     },
 
-                    Mode::Input => todo!(),
+                    Mode::Input => match event.code {
+                        KeyCode::Char(c) => state.input_char(c),
+                        KeyCode::Enter => state.enter(),
+                        KeyCode::Esc => state.cancel_input_mode(),
+                        _ => {}
+                    },
                 }
 
                 state.clear_error_message();

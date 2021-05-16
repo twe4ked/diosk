@@ -7,7 +7,7 @@ use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{ExecutableCommand, QueueableCommand};
 
 use crate::gemini::gemtext::Line;
-use crate::state::StatusLineContext;
+use crate::state::{Mode, StatusLineContext};
 
 pub mod colors;
 
@@ -139,32 +139,54 @@ impl Terminal {
     }
 
     fn draw_status_line(&self, status_line_context: StatusLineContext) {
-        let status_code = status_line_context
-            .status_code
-            .map(|s| s.code())
-            .unwrap_or_else(|| "--".to_string());
+        let cursor_pos = cursor::MoveTo(0, self.height - 1);
 
-        let (fg_1, bg_1, message) = if let Some(error_message) = status_line_context.error_message {
-            (Fg(colors::TEMPTRESS), Bg(colors::OLD_BRICK), error_message)
-        } else {
-            let url = status_line_context
-                .url
-                .map(|u| u.to_string())
-                .unwrap_or_else(|| "-".to_string());
-            (Fg(colors::GREEN_SMOKE), Bg(colors::COSTA_DEL_SOL), url)
-        };
+        match status_line_context.mode {
+            Mode::Normal | Mode::Loading => {
+                let status_code = status_line_context
+                    .status_code
+                    .map(|s| s.code())
+                    .unwrap_or_else(|| "--".to_string());
 
-        print!(
-            "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {message:width$}",
-            cursor_pos = cursor::MoveTo(0, self.height - 1),
-            fg_1 = fg_1,
-            bg_1 = bg_1,
-            fg_2 = Fg(colors::FOREGROUND),
-            bg_2 = Bg(colors::BACKGROUND),
-            status_code = status_code,
-            message = message,
-            width = self.width as usize - 5
-        );
+                let (fg_1, bg_1, message) =
+                    if let Some(error_message) = status_line_context.error_message {
+                        (Fg(colors::TEMPTRESS), Bg(colors::OLD_BRICK), error_message)
+                    } else {
+                        let url = status_line_context
+                            .url
+                            .map(|u| u.to_string())
+                            .unwrap_or_else(|| "-".to_string());
+                        (Fg(colors::GREEN_SMOKE), Bg(colors::COSTA_DEL_SOL), url)
+                    };
+
+                print!(
+                    "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {message:width$}",
+                    cursor_pos = cursor_pos,
+                    fg_1 = fg_1,
+                    bg_1 = bg_1,
+                    fg_2 = Fg(colors::FOREGROUND),
+                    bg_2 = Bg(colors::BACKGROUND),
+                    status_code = status_code,
+                    message = message,
+                    width = self.width as usize - 5
+                );
+            }
+
+            Mode::Input => {
+                let cursor_color = colors::FOREGROUND;
+
+                print!(
+                    "{cursor_pos}{fg_1}{bg_1}:{input}{fg_2}{bg_2} {bg_3}",
+                    cursor_pos = cursor_pos,
+                    fg_1 = Fg(colors::FOREGROUND),
+                    bg_1 = Bg(colors::BACKGROUND),
+                    bg_2 = Bg(cursor_color),
+                    fg_2 = Fg(cursor_color),
+                    bg_3 = Bg(colors::BACKGROUND),
+                    input = status_line_context.input,
+                );
+            }
+        }
     }
 
     /// The number of rows a line takes up when wrapped
