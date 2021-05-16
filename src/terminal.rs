@@ -74,7 +74,7 @@ impl Terminal {
                 }
 
                 // If we're going to overflow the screen, stop printing
-                if cursor_pos.y > self.page_rows() + 1 {
+                if cursor_pos.y >= self.page_rows() {
                     break;
                 }
 
