@@ -8,6 +8,10 @@ use crate::gemini::gemtext::Line;
 use crate::gemini::{Response, StatusCode, TransactionError};
 use crate::terminal::Terminal;
 
+mod command;
+
+use command::Command;
+
 #[derive(Debug)]
 pub enum Event {
     Navigate(Url),
@@ -158,22 +162,25 @@ impl State {
                 info!("enter while loading");
             }
 
-            Mode::Input => {
-                if let Some(url) = self.input.strip_prefix("go ") {
-                    // Navigate
-                    let url = self.qualify_url(&url);
-                    self.mode = Mode::Loading;
-                    self.tx.send(Event::Navigate(url)).unwrap();
-                    self.tx.send(Event::Redraw).unwrap();
-                } else if self.input == "quit" {
-                    self.quit();
-                    return Input::Break;
-                } else {
+            Mode::Input => match command::from(&self.input) {
+                Some(command) => match command {
+                    Command::Navigate(url) => {
+                        let url = self.qualify_url(&url);
+                        self.mode = Mode::Loading;
+                        self.tx.send(Event::Navigate(url)).unwrap();
+                        self.tx.send(Event::Redraw).unwrap();
+                    }
+                    Command::Quit => {
+                        self.quit();
+                        return Input::Break;
+                    }
+                },
+                None => {
                     self.mode = Mode::Normal;
                     self.set_error_message(format!("Invalid command: {}", self.input));
                     self.tx.send(Event::Redraw).unwrap();
                 }
-            }
+            },
         }
 
         self.input.clear();
