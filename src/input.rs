@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crossterm::event::{read, Event, KeyCode, KeyModifiers};
 use log::info;
 
-use crate::state::{Mode, State};
+use crate::state::{Input, Mode, State};
 
 mod readline;
 
@@ -18,20 +18,21 @@ pub fn run(state: Arc<Mutex<State>>) {
 
                 match mode {
                     Mode::Normal | Mode::Loading => match event.code {
-                        KeyCode::Char('q') => {
-                            state.quit();
-                            break;
-                        }
                         KeyCode::Char(':') => state.input(),
                         KeyCode::Char('j') => state.down(),
                         KeyCode::Char('k') => state.up(),
-                        KeyCode::Enter => state.enter(),
+                        KeyCode::Enter => {
+                            state.enter();
+                        }
                         _ => {}
                     },
 
                     Mode::Input => match (event.code, event.modifiers) {
                         (KeyCode::Char(c), KeyModifiers::NONE) => state.input_char(c),
-                        (KeyCode::Enter, _) => state.enter(),
+                        (KeyCode::Enter, _) => match state.enter() {
+                            Input::Continue => {}
+                            Input::Break => break,
+                        },
                         (KeyCode::Esc, _) => state.cancel_input_mode(),
                         (_, _) => match readline::command(event) {
                             Some(command) => match command {

@@ -24,6 +24,11 @@ pub enum Mode {
     Input,
 }
 
+pub enum Input {
+    Continue,
+    Break,
+}
+
 pub struct State {
     pub current_line_index: usize,
     current_row: u16,
@@ -134,7 +139,7 @@ impl State {
         self.tx.send(Event::Terminate).unwrap();
     }
 
-    pub fn enter(&mut self) {
+    pub fn enter(&mut self) -> Input {
         match self.mode {
             Mode::Normal => {
                 let line = &self.content()[self.current_line_index];
@@ -159,6 +164,9 @@ impl State {
                     let url = self.qualify_url(&url);
                     self.mode = Mode::Loading;
                     self.tx.send(Event::Navigate(url)).unwrap();
+                } else if self.input == "quit" {
+                    self.quit();
+                    return Input::Break;
                 }
 
                 self.input.clear();
@@ -166,6 +174,8 @@ impl State {
         }
 
         self.tx.send(Event::Redraw).unwrap();
+
+        Input::Continue
     }
 
     pub fn render_page(&mut self) {
