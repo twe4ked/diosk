@@ -5,9 +5,9 @@ use log::info;
 
 use crate::state::{Input, Mode, State};
 
-mod readline;
+mod edit;
 
-use readline::Command;
+use edit::Command;
 
 pub fn run(state: Arc<Mutex<State>>) {
     loop {
@@ -36,7 +36,7 @@ pub fn run(state: Arc<Mutex<State>>) {
                             Input::Break => break,
                         },
                         (KeyCode::Esc, _) => state.cancel_input_mode(),
-                        (_, _) => match readline::command(event) {
+                        (_, _) => match edit::command(event) {
                             Some(command) => match command {
                                 Command::DeleteWord => state.delete_word(),
                             },
