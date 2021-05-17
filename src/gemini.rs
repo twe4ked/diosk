@@ -140,6 +140,15 @@ pub enum TransactionError {
     PermanentFailure(String, String),
 }
 
+#[cfg(feature = "debug_content")]
+pub fn transaction(_url: &Url) -> Result<Response, TransactionError> {
+    Ok(Response::Body {
+        content: Some("Foo.\nBar.\nBaz.".to_string()),
+        status_code: StatusCode::parse(&"20 text/gemini\r\n").unwrap(),
+    })
+}
+
+#[cfg(not(feature = "debug_content"))]
 pub fn transaction(url: &Url) -> Result<Response, TransactionError> {
     transaction_inner(url, 0)
 }

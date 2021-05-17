@@ -19,3 +19,6 @@ textwrap = "0.13.4"
 thiserror = "1.0.24"
 url = "2.2.1"
 webpki = "0.21.4"
+
+[features]
+debug_content = []
