@@ -8,7 +8,7 @@ pub fn from(input: &str) -> Option<Command> {
 
     if let Some(url) = input.strip_prefix("go ") {
         Some(Navigate(url))
-    } else if input == "quit" {
+    } else if input == "quit" || input == "q" {
         Some(Quit)
     } else {
         None
