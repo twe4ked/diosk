@@ -16,6 +16,8 @@ pub fn run(state: Arc<Mutex<State>>) {
                 let mut state = state.lock().expect("poisoned");
                 let mode = state.mode.clone();
 
+                state.clear_error_message();
+
                 match mode {
                     Mode::Normal | Mode::Loading => match event.code {
                         KeyCode::Char(':') => state.input(),
@@ -42,8 +44,6 @@ pub fn run(state: Arc<Mutex<State>>) {
                         },
                     },
                 }
-
-                state.clear_error_message();
 
                 info!("{:?}", &state);
             }

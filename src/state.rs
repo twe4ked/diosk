@@ -164,16 +164,19 @@ impl State {
                     let url = self.qualify_url(&url);
                     self.mode = Mode::Loading;
                     self.tx.send(Event::Navigate(url)).unwrap();
+                    self.tx.send(Event::Redraw).unwrap();
                 } else if self.input == "quit" {
                     self.quit();
                     return Input::Break;
+                } else {
+                    self.mode = Mode::Normal;
+                    self.set_error_message(format!("Invalid command: {}", self.input));
+                    self.tx.send(Event::Redraw).unwrap();
                 }
-
-                self.input.clear();
             }
         }
 
-        self.tx.send(Event::Redraw).unwrap();
+        self.input.clear();
 
         Input::Continue
     }
