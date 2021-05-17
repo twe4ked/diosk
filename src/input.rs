@@ -1,9 +1,13 @@
 use std::sync::{Arc, Mutex};
 
-use crossterm::event::{read, Event, KeyCode};
+use crossterm::event::{read, Event, KeyCode, KeyModifiers};
 use log::info;
 
 use crate::state::{Mode, State};
+
+mod readline;
+
+use readline::Command;
 
 pub fn run(state: Arc<Mutex<State>>) {
     loop {
@@ -25,11 +29,16 @@ pub fn run(state: Arc<Mutex<State>>) {
                         _ => {}
                     },
 
-                    Mode::Input => match event.code {
-                        KeyCode::Char(c) => state.input_char(c),
-                        KeyCode::Enter => state.enter(),
-                        KeyCode::Esc => state.cancel_input_mode(),
-                        _ => {}
+                    Mode::Input => match (event.code, event.modifiers) {
+                        (KeyCode::Char(c), KeyModifiers::NONE) => state.input_char(c),
+                        (KeyCode::Enter, _) => state.enter(),
+                        (KeyCode::Esc, _) => state.cancel_input_mode(),
+                        (_, _) => match readline::command(event) {
+                            Some(command) => match command {
+                                Command::DeleteWord => state.delete_word(),
+                            },
+                            None => {}
+                        },
                     },
                 }
 

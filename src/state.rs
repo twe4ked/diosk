@@ -122,6 +122,14 @@ impl State {
         self.tx.send(Event::Redraw).unwrap();
     }
 
+    pub fn delete_word(&mut self) {
+        let pat = |c: char| !c.is_ascii_alphanumeric() && c != '_';
+        let mut split = self.input.split_inclusive(pat);
+        let _deleted = split.next_back();
+        self.input = split.collect();
+        self.tx.send(Event::Redraw).unwrap();
+    }
+
     pub fn quit(&mut self) {
         self.tx.send(Event::Terminate).unwrap();
     }
