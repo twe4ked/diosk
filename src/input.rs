@@ -39,6 +39,7 @@ pub fn run(state: Arc<Mutex<State>>) {
                         (_, _) => match edit::command(event) {
                             Some(command) => match command {
                                 Command::DeleteWord => state.delete_word(),
+                                Command::DeleteChar => state.delete_char(),
                             },
                             None => {}
                         },

@@ -139,6 +139,13 @@ impl State {
         self.tx.send(Event::Redraw).unwrap();
     }
 
+    pub fn delete_char(&mut self) {
+        let mut chars = self.input.chars();
+        chars.next_back();
+        self.input = chars.collect();
+        self.tx.send(Event::Redraw).unwrap();
+    }
+
     pub fn quit(&mut self) {
         self.tx.send(Event::Terminate).unwrap();
     }
