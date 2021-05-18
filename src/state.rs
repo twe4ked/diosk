@@ -5,7 +5,8 @@ use log::info;
 use url::Url;
 
 use crate::gemini::gemtext::Line;
-use crate::gemini::{Response, StatusCode, TransactionError};
+use crate::gemini::status_code::StatusCode;
+use crate::gemini::{Response, TransactionError};
 use crate::terminal::Terminal;
 
 mod command;
