@@ -1,41 +1,15 @@
 use log::info;
 use mime::Mime;
-use rustls::{Certificate, ClientConfig, DangerousClientConfig, RootCertStore};
 use thiserror::Error;
 use url::Url;
 
 use std::io::prelude::*;
 use std::io::{self, BufReader, ErrorKind};
 use std::net::{TcpStream, ToSocketAddrs};
-use std::sync::Arc;
 use std::time::Duration;
 
 pub mod gemtext;
-
-pub struct NoCertificateVerification {}
-
-impl rustls::ServerCertVerifier for NoCertificateVerification {
-    fn verify_server_cert(
-        &self,
-        _roots: &RootCertStore,
-        _presented_certs: &[Certificate],
-        _dns_name: webpki::DNSNameRef<'_>,
-        _ocsp_response: &[u8],
-    ) -> Result<rustls::ServerCertVerified, rustls::TLSError> {
-        // TODO: Implement TOFU
-        // https://gemini.circumlunar.space/docs/tls-tutorial.gmi
-        Ok(rustls::ServerCertVerified::assertion())
-    }
-}
-
-fn new_config() -> ClientConfig {
-    let mut cfg = ClientConfig::new();
-
-    let mut dangerous_config = DangerousClientConfig { cfg: &mut cfg };
-    dangerous_config.set_certificate_verifier(Arc::new(NoCertificateVerification {}));
-
-    cfg
-}
+mod tls;
 
 #[derive(Debug, Clone)]
 pub enum StatusCode {
@@ -156,9 +130,7 @@ pub fn transaction(url: &Url) -> Result<Response, TransactionError> {
 fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
     let host = url.host_str().expect("no host");
 
-    let config = new_config();
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(&host)?;
-    let mut tls_client = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let mut tls_client = tls::client(&host)?;
 
     info!("resolving domain");
     let addrs: Vec<_> = format!("{}:{}", &host, &PORT)
