@@ -127,7 +127,7 @@ impl Terminal {
                     .queue(Fg(colors::MANTIS))?
                     .queue(Print("=> "))?
                     .queue(Fg(colors::FOREGROUND))?
-                    .queue(Print(name.as_ref().unwrap_or_else(|| url)))?
+                    .queue(Print(name.as_ref().unwrap_or(url)))?
                     .queue(Fg(colors::REGENT_GREY))?
                     .queue(Print(" "))?
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
