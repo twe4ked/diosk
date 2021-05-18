@@ -36,13 +36,14 @@ pub fn run(state: Arc<Mutex<State>>) {
                             Input::Break => break,
                         },
                         (KeyCode::Esc, _) => state.cancel_input_mode(),
-                        (_, _) => match edit::command(event) {
-                            Some(command) => match command {
-                                Command::DeleteWord => state.delete_word(),
-                                Command::DeleteChar => state.delete_char(),
-                            },
-                            None => {}
-                        },
+                        (_, _) => {
+                            if let Some(command) = edit::command(event) {
+                                match command {
+                                    Command::DeleteWord => state.delete_word(),
+                                    Command::DeleteChar => state.delete_char(),
+                                }
+                            }
+                        }
                     },
                 }
 
