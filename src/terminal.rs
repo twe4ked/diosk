@@ -41,9 +41,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    pub fn new() -> crossterm::Result<Self> {
-        let (width, height) = terminal::size()?;
-
+    pub fn new(width: u16, height: u16) -> crossterm::Result<Self> {
         stdout().queue(cursor::MoveTo(1, 1))?;
 
         Ok(Self { width, height })

@@ -1,6 +1,7 @@
 use std::fmt;
 use std::sync::mpsc;
 
+use crossterm::terminal;
 use log::info;
 use url::Url;
 
@@ -45,6 +46,8 @@ pub struct State {
     pub scroll_offset: u16,
     error_message: Option<String>,
     input: String,
+    width: u16,
+    height: u16,
 }
 
 impl fmt::Debug for State {
@@ -68,6 +71,8 @@ impl State {
     }
 
     fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {
+        let (width, height) = terminal::size().unwrap();
+
         Self {
             current_line_index: 0,
             current_row: 1,
@@ -79,6 +84,8 @@ impl State {
             scroll_offset: 0,
             error_message: None,
             input: String::new(),
+            width,
+            height,
         }
     }
 
@@ -92,7 +99,7 @@ impl State {
         self.current_line_index += 1;
 
         // Check if we need to scroll
-        let terminal = Terminal::new().unwrap();
+        let terminal = Terminal::new(self.width, self.height).unwrap();
         if self.current_row >= terminal.page_rows() {
             self.scroll_offset += 1;
         }
@@ -198,7 +205,7 @@ impl State {
 
     pub fn render_page(&mut self) {
         let status_line_context = StatusLineContext::new_from_state(&self);
-        let terminal = Terminal::new().unwrap();
+        let terminal = Terminal::new(self.width, self.height).unwrap();
 
         self.current_row = terminal
             .render_page(
@@ -247,7 +254,9 @@ impl State {
     }
 
     pub fn new_size(&mut self, width: u16, height: u16) {
-        info!("New size {}x{}", &width, &height);
+        self.width = width;
+        self.height = height;
+        info!("New size {}x{}", self.width, self.height);
         self.send_redraw();
     }
 }
