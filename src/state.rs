@@ -99,7 +99,7 @@ impl State {
         self.current_line_index += 1;
 
         // Check if we need to scroll
-        let terminal = Terminal::new(self.width, self.height).unwrap();
+        let terminal = Terminal::new(self.width, self.height);
         if self.current_row >= terminal.page_rows() {
             self.scroll_offset += 1;
         }
@@ -205,7 +205,7 @@ impl State {
 
     pub fn render_page(&mut self) {
         let status_line_context = StatusLineContext::new_from_state(&self);
-        let terminal = Terminal::new(self.width, self.height).unwrap();
+        let terminal = Terminal::new(self.width, self.height);
 
         self.current_row = terminal
             .render_page(
