@@ -11,6 +11,17 @@ use crate::state::{Mode, StatusLineContext};
 
 pub mod colors;
 
+const LOGO: &'static str = r#"
+     ,ogggggggg,
+    dP"""88""""Y8b,                          ,dPYb,
+    Yb,  88     `8b,                         IP'`Yb
+     `"  88     `8b'gg                       I8  8I
+         88      d8'""    ,ggggg,    ,g,     I8 dP" "8
+         88     ,8P 88   dP"  "Y8ggg,8'8,    I8d8bggP"
+         88___,dP'_,88_,d8,   ,d8',8'_   8) ,d8    `Yb,
+        888888P"  8P""YP"Y8888P"  P' "YY8P8P88P      Y8
+"#;
+
 #[derive(Debug)]
 struct CursorPosition {
     x: u16,
@@ -45,6 +56,12 @@ impl Terminal {
         scroll_offset: u16,
         status_line_context: StatusLineContext,
     ) -> crossterm::Result<u16> {
+        if status_line_context.url.is_none() {
+            self.render_default_page(status_line_context)?;
+            stdout().flush()?;
+            return Ok(0);
+        }
+
         let start_printing_from_row = scroll_offset + 1;
         let mut row = 0;
 
@@ -91,6 +108,30 @@ impl Terminal {
         stdout().flush()?;
 
         Ok(current_row.expect("no current row"))
+    }
+
+    fn render_default_page(&self, status_line_context: StatusLineContext) -> crossterm::Result<()> {
+        let logo_height: u16 = LOGO.lines().count() as _;
+        let logo_width: u16 = LOGO.lines().map(|l| l.len()).max().expect("infallible") as _;
+
+        let x = (self.width / 2) - (logo_width / 2);
+        let y = (self.height / 2) - (logo_height / 2);
+
+        // Move logo to the left slightly as its asymmetrical
+        let x = x - 6;
+
+        let mut cursor_pos = CursorPosition { x, y };
+
+        for line in LOGO.lines() {
+            print!("{}{}", cursor::MoveTo(cursor_pos.x, cursor_pos.y), line);
+            cursor_pos.y += 1;
+        }
+
+        self.draw_status_line(status_line_context);
+
+        stdout().flush()?;
+
+        Ok(())
     }
 
     fn render_line(&self, line: &Line, is_active: bool) -> crossterm::Result<Vec<Vec<u8>>> {

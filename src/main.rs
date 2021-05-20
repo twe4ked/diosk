@@ -32,12 +32,8 @@ fn main() {
 
     // Initialize State
     let (state, tx, rx) = {
-        let (mut state, tx, rx) = State::new();
-
-        // Request and render the initial page
-        state.request("gemini://gemini.circumlunar.space/software/".to_string());
-        state.render_page();
-
+        let (state, tx, rx) = State::new();
+        state.send_redraw();
         (Arc::new(Mutex::new(state)), tx, rx)
     };
 

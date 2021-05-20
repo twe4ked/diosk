@@ -241,6 +241,10 @@ impl State {
     pub fn clear_error_message(&mut self) {
         self.error_message = None;
     }
+
+    pub fn send_redraw(&self) {
+        self.tx.send(Event::Redraw).unwrap();
+    }
 }
 
 pub struct StatusLineContext<'a> {
