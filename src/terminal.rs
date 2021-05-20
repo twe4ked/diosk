@@ -11,7 +11,7 @@ use crate::state::{Mode, StatusLineContext};
 
 pub mod colors;
 
-const LOGO: &'static str = r#"
+const LOGO: &str = r#"
      ,ogggggggg,
     dP"""88""""Y8b,                          ,dPYb,
     Yb,  88     `8b,                         IP'`Yb
