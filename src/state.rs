@@ -245,6 +245,11 @@ impl State {
     pub fn send_redraw(&self) {
         self.tx.send(Event::Redraw).unwrap();
     }
+
+    pub fn new_size(&mut self, width: u16, height: u16) {
+        info!("New size {}x{}", &width, &height);
+        self.send_redraw();
+    }
 }
 
 pub struct StatusLineContext<'a> {

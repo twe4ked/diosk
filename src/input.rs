@@ -50,7 +50,10 @@ pub fn run(state: Arc<Mutex<State>>) {
                 info!("{:?}", &state);
             }
             Event::Mouse(event) => info!("{:?}", event),
-            Event::Resize(width, height) => info!("New size {}x{}", width, height),
+            Event::Resize(width, height) => {
+                let mut state = state.lock().expect("poisoned");
+                state.new_size(width, height);
+            }
         }
     }
 }
