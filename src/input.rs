@@ -27,18 +27,14 @@ pub fn run(state: Arc<Mutex<State>>) {
 }
 
 fn handle_key_event(state: &mut State, event: KeyEvent) {
-    let mode = state.mode.clone();
-
     state.clear_error_message();
 
-    match mode {
+    match state.mode {
         Mode::Normal | Mode::Loading => match event.code {
             KeyCode::Char(':') => state.input(),
             KeyCode::Char('j') => state.down(),
             KeyCode::Char('k') => state.up(),
-            KeyCode::Enter => {
-                state.enter();
-            }
+            KeyCode::Enter => state.enter(),
             _ => {}
         },
 
