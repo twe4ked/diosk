@@ -30,11 +30,6 @@ pub enum Mode {
     Input,
 }
 
-pub enum Input {
-    Continue,
-    Break,
-}
-
 pub struct State {
     pub current_line_index: usize,
     current_row: u16,
@@ -48,6 +43,7 @@ pub struct State {
     input: String,
     width: u16,
     height: u16,
+    terminated: bool,
 }
 
 impl fmt::Debug for State {
@@ -86,6 +82,7 @@ impl State {
             input: String::new(),
             width,
             height,
+            terminated: false,
         }
     }
 
@@ -155,10 +152,11 @@ impl State {
     }
 
     pub fn quit(&mut self) {
+        self.terminated = true;
         self.tx.send(Event::Terminate).unwrap();
     }
 
-    pub fn enter(&mut self) -> Input {
+    pub fn enter(&mut self) {
         match self.mode {
             Mode::Normal => {
                 let line = &self.content()[self.current_line_index];
@@ -187,7 +185,6 @@ impl State {
                     }
                     Command::Quit => {
                         self.quit();
-                        return Input::Break;
                     }
                 },
                 None => {
@@ -199,8 +196,10 @@ impl State {
         }
 
         self.input.clear();
+    }
 
-        Input::Continue
+    pub fn terminated(&self) -> bool {
+        self.terminated
     }
 
     pub fn render_page(&mut self) {
