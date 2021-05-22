@@ -20,6 +20,8 @@ const LOGO: &str = r#"
          88     ,8P 88   dP"  "Y8ggg,8'8,    I8d8bggP"
          88___,dP'_,88_,d8,   ,d8',8'_   8) ,d8    `Yb,
         888888P"  8P""YP"Y8888P"  P' "YY8P8P88P      Y8
+
+                    - gemini://gemini.circumlunar.space
 "#;
 
 #[derive(Debug)]
