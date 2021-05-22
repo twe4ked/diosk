@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{read, Event, KeyCode, KeyEvent};
 use log::info;
 
 use crate::state::{Mode, State};
@@ -38,19 +38,17 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
             _ => {}
         },
 
-        Mode::Input => match (event.code, event.modifiers) {
-            (KeyCode::Char(c), KeyModifiers::NONE) => state.input_char(c),
-            (KeyCode::Enter, _) => state.enter(),
-            (KeyCode::Esc, _) => state.cancel_input_mode(),
-            (_, _) => {
-                if let Some(command) = edit::command(event) {
-                    match command {
-                        Command::DeleteWord => state.delete_word(),
-                        Command::DeleteChar => state.delete_char(),
-                    }
+        Mode::Input => {
+            if let Some(command) = edit::command(event) {
+                match command {
+                    Command::DeleteWord => state.delete_word(),
+                    Command::DeleteChar => state.delete_char(),
+                    Command::AddChar(c) => state.input_char(c),
+                    Command::Enter => state.enter(),
+                    Command::Esc => state.cancel_input_mode(),
                 }
             }
-        },
+        }
     }
 
     info!("{:?}", &state);
