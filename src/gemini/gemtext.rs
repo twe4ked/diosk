@@ -1,5 +1,6 @@
 // https://gemini.circumlunar.space/docs/gemtext.gmi
 
+#[derive(Debug, PartialEq)]
 pub enum Line {
     Normal(String),
     Link { url: String, name: Option<String> },
@@ -19,20 +20,22 @@ impl Line {
             //     <URL> is a URL, which may be absolute or relative.
 
             let mut last_whitespace = false;
-            let mut parts = line
-                .splitn(3, |c: char| {
+            let split_on_whitespace = {
+                |c: char| {
                     if c.is_whitespace() {
                         if last_whitespace {
-                            return false;
+                            false
+                        } else {
+                            last_whitespace = true;
+                            true
                         }
-                        last_whitespace = true;
-                        true
                     } else {
                         last_whitespace = false;
                         false
                     }
-                })
-                .map(str::trim);
+                }
+            };
+            let mut parts = line.splitn(3, split_on_whitespace).map(str::trim);
 
             let _ = parts.next(); // =>
 
@@ -46,5 +49,33 @@ impl Line {
         } else {
             Line::Normal(line.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn line_parse() {
+        let assert_normal = |i: &str, o: &str| {
+            assert_eq!(Line::parse(i), Line::Normal(o.to_string()));
+        };
+        let assert_link = |i: &str, u: &str, n: Option<&str>| {
+            assert_eq!(
+                Line::parse(i),
+                Line::Link {
+                    url: u.to_string(),
+                    name: n.map(|s| s.to_string()),
+                }
+            );
+        };
+
+        assert_normal(&"", "");
+        assert_normal(&"Hello, World", "Hello, World");
+        assert_normal(&" => Hello, World", " => Hello, World");
+
+        assert_link(&"=> Hello, World", "Hello,", Some("World"));
+        assert_link(&"=>   Hello,   World   ", "Hello,", Some("World"));
     }
 }
