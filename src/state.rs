@@ -1,14 +1,14 @@
 use std::fmt;
 use std::sync::mpsc;
 
-use crossterm::terminal;
+use crossterm::terminal::size as terminal_size;
 use log::info;
 use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::status_code::StatusCode;
 use crate::gemini::{Response, TransactionError};
-use crate::terminal::Terminal;
+use crate::terminal::{self, Terminal};
 
 mod command;
 
@@ -66,7 +66,7 @@ impl State {
     }
 
     fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {
-        let (width, height) = terminal::size().unwrap();
+        let (width, height) = terminal_size().unwrap();
 
         Self {
             current_line_index: 0,
@@ -256,7 +256,7 @@ impl State {
 
     pub fn clear_screen_and_render_page(&mut self) {
         // TODO: We don't always need to clear the screen. Only for things like scrolling.
-        crate::terminal::clear_screen().unwrap();
+        terminal::clear_screen().unwrap();
 
         self.render_page();
     }
@@ -277,7 +277,7 @@ impl State {
             Response::RedirectLoop(_url) => todo!("handle redirect loops"),
         }
 
-        crate::terminal::clear_screen().unwrap();
+        terminal::clear_screen().unwrap();
         self.mode = Mode::Normal;
         self.render_page();
     }
@@ -286,7 +286,7 @@ impl State {
         info!("transaction error: {}", e);
 
         self.set_error_message(e.to_string());
-        crate::terminal::clear_screen().unwrap();
+        terminal::clear_screen().unwrap();
         self.mode = Mode::Normal;
         self.render_page();
     }
