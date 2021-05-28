@@ -23,11 +23,11 @@ pub enum StatusCode {
 
 #[derive(Error, Debug)]
 #[error("status code parse error")]
-pub struct StatusCodeParseError;
+pub struct ParseError;
 
 impl StatusCode {
     // <STATUS><SPACE><META><CR><LF>
-    pub(super) fn parse(input: &str) -> Result<StatusCode, StatusCodeParseError> {
+    pub(super) fn parse(input: &str) -> Result<StatusCode, ParseError> {
         info!("header: {}", input.trim());
 
         let mut parts = input.splitn(2, ' ');
@@ -67,7 +67,7 @@ impl StatusCode {
                 Ok(StatusCode::PermanentFailure { code, meta })
             }
             Some(s) => panic!("invalid status code: {}", s),
-            _ => Err(StatusCodeParseError {}),
+            _ => Err(ParseError {}),
         }
     }
 

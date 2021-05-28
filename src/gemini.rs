@@ -12,7 +12,7 @@ pub mod gemtext;
 pub mod status_code;
 mod tls;
 
-use status_code::{StatusCode, StatusCodeParseError};
+use status_code::StatusCode;
 
 const PORT: u16 = 1965;
 
@@ -32,7 +32,7 @@ pub enum TransactionError {
     #[error("IO error")]
     IoError(#[from] io::Error),
     #[error("status code parse error")]
-    StatusCodeParseError(#[from] StatusCodeParseError),
+    StatusCodeParseError(#[from] status_code::ParseError),
     #[error("permanent failure: {0} {1}")]
     PermanentFailure(String, String),
 }
