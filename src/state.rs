@@ -260,6 +260,36 @@ impl State {
 
         self.render_page();
     }
+
+    pub fn transaction_complete(&mut self, response: Response, url: Url) {
+        match response {
+            Response::Body {
+                content,
+                status_code,
+            } => {
+                // Move the current line back to the top of the page
+                self.current_line_index = 0;
+
+                self.content = content;
+                self.current_url = Some(url);
+                self.last_status_code = Some(status_code);
+            }
+            Response::RedirectLoop(_url) => todo!("handle redirect loops"),
+        }
+
+        crate::terminal::clear_screen().unwrap();
+        self.mode = Mode::Normal;
+        self.render_page();
+    }
+
+    pub fn transaction_error(&mut self, e: TransactionError) {
+        info!("transaction error: {}", e);
+
+        self.set_error_message(e.to_string());
+        crate::terminal::clear_screen().unwrap();
+        self.mode = Mode::Normal;
+        self.render_page();
+    }
 }
 
 pub struct StatusLineContext<'a> {

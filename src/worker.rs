@@ -3,9 +3,8 @@ use std::thread;
 
 use log::info;
 
-use crate::gemini::{transaction, Response};
-use crate::state::{Event, Mode, State};
-use crate::terminal;
+use crate::gemini::transaction;
+use crate::state::{Event, State};
 
 pub struct Worker;
 
@@ -45,35 +44,11 @@ fn handle_event_loop(state: Arc<Mutex<State>>, tx: mpsc::Sender<Event>, rx: mpsc
             }
             Event::TransactionComplete(response, url) => {
                 let mut state = state.lock().expect("poisoned");
-
-                match response {
-                    Response::Body {
-                        content,
-                        status_code,
-                    } => {
-                        // Move the current line back to the top of the page
-                        state.current_line_index = 0;
-
-                        state.content = content;
-                        state.current_url = Some(url);
-                        state.last_status_code = Some(status_code);
-                    }
-                    Response::RedirectLoop(_url) => todo!("handle redirect loops"),
-                }
-
-                terminal::clear_screen().unwrap();
-                state.mode = Mode::Normal;
-                state.render_page();
+                state.transaction_complete(response, url);
             }
             Event::TransactionError(e) => {
-                info!("transaction error: {}", e);
-
                 let mut state = state.lock().expect("poisoned");
-
-                state.set_error_message(e.to_string());
-                terminal::clear_screen().unwrap();
-                state.mode = Mode::Normal;
-                state.render_page();
+                state.transaction_error(e);
             }
             Event::Terminate => break,
         }
