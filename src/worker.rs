@@ -43,14 +43,6 @@ fn handle_event_loop(state: Arc<Mutex<State>>, tx: mpsc::Sender<Event>, rx: mpsc
                     response
                 });
             }
-            Event::Redraw => {
-                let mut state = state.lock().expect("poisoned");
-
-                // TODO: We don't always need to clear the screen. Only for things like scrolling.
-                terminal::clear_screen().unwrap();
-
-                state.render_page();
-            }
             Event::TransactionComplete(response, url) => {
                 let mut state = state.lock().expect("poisoned");
 

@@ -32,8 +32,8 @@ fn main() {
 
     // Initialize State
     let (state, tx, rx) = {
-        let (state, tx, rx) = State::new();
-        state.send_redraw();
+        let (mut state, tx, rx) = State::new();
+        state.clear_screen_and_render_page();
         (Arc::new(Mutex::new(state)), tx, rx)
     };
 

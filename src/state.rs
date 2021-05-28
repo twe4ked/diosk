@@ -18,7 +18,6 @@ use command::Command;
 pub enum Event {
     Navigate(Url),
     Terminate,
-    Redraw,
     TransactionComplete(Response, Url),
     TransactionError(TransactionError),
 }
@@ -101,7 +100,7 @@ impl State {
             self.scroll_offset += 1;
         }
 
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn up(&mut self) {
@@ -117,23 +116,23 @@ impl State {
             self.scroll_offset -= 1;
         }
 
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn input(&mut self) {
         self.mode = Mode::Input;
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn input_char(&mut self, c: char) {
         self.input.push(c);
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn cancel_input_mode(&mut self) {
         self.mode = Mode::Normal;
         self.input.clear();
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn delete_word(&mut self) {
@@ -141,14 +140,14 @@ impl State {
         let mut split = self.input.split_inclusive(pat);
         let _deleted = split.next_back();
         self.input = split.collect();
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn delete_char(&mut self) {
         let mut chars = self.input.chars();
         chars.next_back();
         self.input = chars.collect();
-        self.tx.send(Event::Redraw).unwrap();
+        self.clear_screen_and_render_page();
     }
 
     pub fn quit(&mut self) {
@@ -181,7 +180,7 @@ impl State {
                         let url = self.qualify_url(&url);
                         self.mode = Mode::Loading;
                         self.tx.send(Event::Navigate(url)).unwrap();
-                        self.tx.send(Event::Redraw).unwrap();
+                        self.clear_screen_and_render_page();
                     }
                     Command::Quit => {
                         self.quit();
@@ -190,7 +189,7 @@ impl State {
                 None => {
                     self.mode = Mode::Normal;
                     self.set_error_message(format!("Invalid command: {}", self.input));
-                    self.tx.send(Event::Redraw).unwrap();
+                    self.clear_screen_and_render_page();
                 }
             },
         }
@@ -248,15 +247,18 @@ impl State {
         self.error_message = None;
     }
 
-    pub fn send_redraw(&self) {
-        self.tx.send(Event::Redraw).unwrap();
-    }
-
     pub fn new_size(&mut self, width: u16, height: u16) {
         self.width = width;
         self.height = height;
         info!("New size {}x{}", self.width, self.height);
-        self.send_redraw();
+        self.clear_screen_and_render_page();
+    }
+
+    pub fn clear_screen_and_render_page(&mut self) {
+        // TODO: We don't always need to clear the screen. Only for things like scrolling.
+        crate::terminal::clear_screen().unwrap();
+
+        self.render_page();
     }
 }
 
