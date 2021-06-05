@@ -1,5 +1,6 @@
 use std::fmt;
 use std::sync::mpsc;
+use std::thread;
 
 use crossterm::terminal::size as terminal_size;
 use log::info;
@@ -7,7 +8,7 @@ use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::status_code::StatusCode;
-use crate::gemini::{Response, TransactionError};
+use crate::gemini::{transaction, Response, TransactionError};
 use crate::terminal::{self, Terminal};
 
 mod command;
@@ -16,7 +17,6 @@ use command::Command;
 
 #[derive(Debug)]
 pub enum Event {
-    Navigate(Url),
     Terminate,
     TransactionComplete(Response, Url),
     TransactionError(TransactionError),
@@ -58,11 +58,11 @@ impl fmt::Debug for State {
 }
 
 impl State {
-    pub fn new() -> (Self, mpsc::Sender<Event>, mpsc::Receiver<Event>) {
+    pub fn new() -> (Self, mpsc::Receiver<Event>) {
         // Set up a channel for State to talk to the worker thread
         let (tx, rx) = mpsc::channel();
 
-        (Self::new_with_tx(tx.clone()), tx, rx)
+        (Self::new_with_tx(tx), rx)
     }
 
     fn new_with_tx(tx: mpsc::Sender<Event>) -> Self {
@@ -85,10 +85,20 @@ impl State {
         }
     }
 
-    pub fn request(&mut self, url_or_path: String) {
+    pub fn request(&mut self, url_or_path: &str) {
         let url = self.qualify_url(&url_or_path);
         self.mode = Mode::Loading;
-        self.tx.send(Event::Navigate(url)).unwrap();
+        let tx = self.tx.clone();
+        thread::spawn(move || {
+            let response = match transaction(&url) {
+                Ok(response) => tx.send(Event::TransactionComplete(response, url)),
+                Err(e) => tx.send(Event::TransactionError(e)),
+            };
+
+            info!("finished navigating");
+
+            response
+        });
     }
 
     pub fn down(&mut self) {
@@ -161,10 +171,7 @@ impl State {
                 let line = &self.content()[self.current_line_index];
 
                 if let Line::Link { url, .. } = line {
-                    // Navigate
-                    let url = self.qualify_url(&url);
-                    self.mode = Mode::Loading;
-                    self.tx.send(Event::Navigate(url)).unwrap();
+                    self.request(url);
                 } else {
                     // Nothing to do on non-link lines
                 }
@@ -174,12 +181,10 @@ impl State {
                 info!("enter while loading");
             }
 
-            Mode::Input => match command::from(&self.input) {
+            Mode::Input => match command::from(&self.input.clone()) {
                 Some(command) => match command {
                     Command::Navigate(url) => {
-                        let url = self.qualify_url(&url);
-                        self.mode = Mode::Loading;
-                        self.tx.send(Event::Navigate(url)).unwrap();
+                        self.request(url);
                         self.clear_screen_and_render_page();
                     }
                     Command::Quit => {

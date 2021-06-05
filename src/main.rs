@@ -31,14 +31,14 @@ fn main() {
     terminal::setup_alternate_screen().expect("unable to setup terminal");
 
     // Initialize State
-    let (state, tx, rx) = {
-        let (mut state, tx, rx) = State::new();
+    let (state, rx) = {
+        let (mut state, rx) = State::new();
         state.clear_screen_and_render_page();
-        (Arc::new(Mutex::new(state)), tx, rx)
+        (Arc::new(Mutex::new(state)), rx)
     };
 
     // Spawn the worker thread
-    let worker = Worker::spawn(state.clone(), tx, rx);
+    let worker = Worker::spawn(state.clone(), rx);
 
     // Run a blocking input loop
     run_input_loop(state);
