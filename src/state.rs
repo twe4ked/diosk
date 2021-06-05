@@ -22,7 +22,7 @@ pub enum Event {
     TransactionError(TransactionError),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Mode {
     Normal,
     Loading,
@@ -30,14 +30,14 @@ pub enum Mode {
 }
 
 pub struct State {
-    pub current_line_index: usize,
+    current_line_index: usize,
     current_row: u16,
-    pub content: Option<String>,
-    pub mode: Mode,
-    pub tx: mpsc::Sender<Event>,
-    pub current_url: Option<Url>,
-    pub last_status_code: Option<StatusCode>,
-    pub scroll_offset: u16,
+    content: Option<String>,
+    mode: Mode,
+    tx: mpsc::Sender<Event>,
+    current_url: Option<Url>,
+    last_status_code: Option<StatusCode>,
+    scroll_offset: u16,
     error_message: Option<String>,
     input: String,
     width: u16,
@@ -294,6 +294,10 @@ impl State {
         terminal::clear_screen().unwrap();
         self.mode = Mode::Normal;
         self.render_page();
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.mode
     }
 }
 

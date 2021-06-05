@@ -29,7 +29,7 @@ pub fn run(state: Arc<Mutex<State>>) {
 fn handle_key_event(state: &mut State, event: KeyEvent) {
     state.clear_error_message();
 
-    match state.mode {
+    match state.mode() {
         Mode::Normal | Mode::Loading => match event.code {
             KeyCode::Char(':') => state.input(),
             KeyCode::Char('j') => state.down(),
