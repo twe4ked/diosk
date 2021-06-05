@@ -85,7 +85,7 @@ impl State {
         }
     }
 
-    pub fn request(&mut self, url_or_path: &str) {
+    fn request(&mut self, url_or_path: &str) {
         let url = self.qualify_url(&url_or_path);
         self.mode = Mode::Loading;
         let tx = self.tx.clone();
@@ -160,7 +160,7 @@ impl State {
         self.clear_screen_and_render_page();
     }
 
-    pub fn quit(&mut self) {
+    fn quit(&mut self) {
         self.terminated = true;
         self.tx.send(Event::TerminateWorker).unwrap();
     }
@@ -206,7 +206,7 @@ impl State {
         self.terminated
     }
 
-    pub fn render_page(&mut self) {
+    fn render_page(&mut self) {
         let status_line_context = StatusLineContext::new_from_state(&self);
         let terminal = Terminal::new(self.width, self.height);
 
@@ -244,7 +244,7 @@ impl State {
             .unwrap_or_else(|| vec![Line::Normal(String::new())])
     }
 
-    pub fn set_error_message(&mut self, message: String) {
+    fn set_error_message(&mut self, message: String) {
         self.error_message = Some(message);
     }
 
