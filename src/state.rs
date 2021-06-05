@@ -168,51 +168,52 @@ impl State {
     }
 
     pub fn enter(&mut self) {
-        match self.mode {
-            Mode::Normal => {
-                let line = &self.content()[self.current_line_index];
+        if matches!(self.mode, Mode::Loading) {
+            info!("enter while loading");
+            return;
+        }
 
-                if let Line::Link { url, .. } = line {
+        let line = &self.content()[self.current_line_index];
+
+        if let Line::Link { url, .. } = line {
+            self.request(url);
+        } else {
+            // Nothing to do on non-link lines
+        }
+    }
+
+    pub fn loading_mode_enter(&mut self) {
+        info!("enter while loading");
+    }
+
+    pub fn input_mode_enter(&mut self) {
+        let input = self.input.clone();
+
+        let mut history = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("target/history.txt")
+            .unwrap();
+        write!(&mut history, "{}\n", &input).unwrap();
+
+        match command::from(&input) {
+            Some(command) => match command {
+                Command::Navigate(url) => {
                     self.request(url);
-                } else {
-                    // Nothing to do on non-link lines
+                    self.clear_screen_and_render_page();
                 }
-            }
-
-            Mode::Loading => {
-                info!("enter while loading");
-            }
-
-            Mode::Input => {
-                let input = self.input.clone();
-
-                let mut history = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open("target/history.txt")
-                    .unwrap();
-                write!(&mut history, "{}\n", &input).unwrap();
-
-                match command::from(&input) {
-                    Some(command) => match command {
-                        Command::Navigate(url) => {
-                            self.request(url);
-                            self.clear_screen_and_render_page();
-                        }
-                        Command::Quit => {
-                            self.quit();
-                        }
-                    },
-                    None => {
-                        self.mode = Mode::Normal;
-                        self.set_error_message(format!("Invalid command: {}", self.input));
-                        self.clear_screen_and_render_page();
-                    }
+                Command::Quit => {
+                    self.quit();
                 }
-
-                self.input.clear();
+            },
+            None => {
+                self.mode = Mode::Normal;
+                self.set_error_message(format!("Invalid command: {}", self.input));
+                self.clear_screen_and_render_page();
             }
         }
+
+        self.input.clear();
     }
 
     pub fn terminated(&self) -> bool {

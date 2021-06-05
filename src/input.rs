@@ -34,7 +34,13 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
             KeyCode::Char(':') => state.input(),
             KeyCode::Char('j') => state.down(),
             KeyCode::Char('k') => state.up(),
-            KeyCode::Enter => state.enter(),
+            KeyCode::Enter => {
+                if matches!(state.mode(), Mode::Loading) {
+                    state.loading_mode_enter();
+                } else {
+                    state.enter();
+                }
+            }
             _ => {}
         },
 
@@ -44,7 +50,7 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
                     Command::DeleteWord => state.delete_word(),
                     Command::DeleteChar => state.delete_char(),
                     Command::AddChar(c) => state.input_char(c),
-                    Command::Enter => state.enter(),
+                    Command::Enter => state.input_mode_enter(),
                     Command::Esc => state.cancel_input_mode(),
                 }
             }
