@@ -17,7 +17,7 @@ use command::Command;
 
 #[derive(Debug)]
 pub enum Event {
-    Terminate,
+    TerminateWorker,
     TransactionComplete(Response, Url),
     TransactionError(TransactionError),
 }
@@ -162,7 +162,7 @@ impl State {
 
     pub fn quit(&mut self) {
         self.terminated = true;
-        self.tx.send(Event::Terminate).unwrap();
+        self.tx.send(Event::TerminateWorker).unwrap();
     }
 
     pub fn enter(&mut self) {

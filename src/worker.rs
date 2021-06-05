@@ -30,7 +30,7 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
                 let mut state = state.lock().expect("poisoned");
                 state.transaction_error(e);
             }
-            Event::Terminate => break,
+            Event::TerminateWorker => break,
         }
     }
 }
