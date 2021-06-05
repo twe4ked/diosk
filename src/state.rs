@@ -1,4 +1,6 @@
 use std::fmt;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::sync::mpsc;
 use std::thread;
 
@@ -181,25 +183,36 @@ impl State {
                 info!("enter while loading");
             }
 
-            Mode::Input => match command::from(&self.input.clone()) {
-                Some(command) => match command {
-                    Command::Navigate(url) => {
-                        self.request(url);
+            Mode::Input => {
+                let input = self.input.clone();
+
+                let mut history = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open("target/history.txt")
+                    .unwrap();
+                write!(&mut history, "{}\n", &input).unwrap();
+
+                match command::from(&input) {
+                    Some(command) => match command {
+                        Command::Navigate(url) => {
+                            self.request(url);
+                            self.clear_screen_and_render_page();
+                        }
+                        Command::Quit => {
+                            self.quit();
+                        }
+                    },
+                    None => {
+                        self.mode = Mode::Normal;
+                        self.set_error_message(format!("Invalid command: {}", self.input));
                         self.clear_screen_and_render_page();
                     }
-                    Command::Quit => {
-                        self.quit();
-                    }
-                },
-                None => {
-                    self.mode = Mode::Normal;
-                    self.set_error_message(format!("Invalid command: {}", self.input));
-                    self.clear_screen_and_render_page();
                 }
-            },
-        }
 
-        self.input.clear();
+                self.input.clear();
+            }
+        }
     }
 
     pub fn terminated(&self) -> bool {
