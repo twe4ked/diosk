@@ -1,5 +1,5 @@
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{self, BufRead, BufReader, Write};
 
 pub enum InputEnterResult {
     Navigate(String),
@@ -23,12 +23,27 @@ impl InputEnterResult {
 
 pub struct Input {
     pub input: String,
+    history_index: Option<usize>,
+    existing_history: Vec<String>,
+    local_history: Vec<String>,
 }
 
 impl Input {
     pub fn new() -> Self {
+        let history = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .read(true)
+            .open("target/history.txt")
+            .unwrap();
+        let history = BufReader::new(history);
+        let history: Vec<String> = history.lines().map(|s| s.unwrap()).collect();
+
         Self {
             input: String::new(),
+            history_index: None,
+            existing_history: history,
+            local_history: Vec::new(),
         }
     }
 
@@ -53,17 +68,59 @@ impl Input {
         self.input = chars.collect();
     }
 
+    pub fn up(&mut self) {
+        match self.history_index.as_mut() {
+            Some(i) => *i += 1,
+            None => self.history_index = Some(0),
+        }
+        self.set_input_from_history();
+    }
+
+    pub fn down(&mut self) {
+        if self.history_index == Some(0) {
+            return;
+        }
+
+        match self.history_index.as_mut() {
+            Some(i) => *i -= 1,
+            None => self.history_index = Some(0),
+        }
+        self.set_input_from_history();
+    }
+
+    pub fn set_input_from_history(&mut self) {
+        let history = self
+            .existing_history
+            .iter()
+            .chain(self.local_history.iter());
+
+        self.input = history
+            .rev()
+            .nth(self.history_index.expect("must be set"))
+            .map_or_else(String::new, |s| s.clone());
+    }
+
     pub fn enter(&mut self) -> InputEnterResult {
         let input = self.input.clone();
         self.input.clear();
+        self.local_history.push(input.clone());
+        self.history_index = None;
+        InputEnterResult::from(&input)
+    }
 
+    pub fn flush_history(&mut self) -> io::Result<()> {
         let mut history = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("target/history.txt")
-            .unwrap();
-        write!(&mut history, "{}\n", &input).unwrap();
+            .open("target/history.txt")?;
 
-        InputEnterResult::from(&input)
+        for line in &self.local_history {
+            writeln!(history, "{}", line)?;
+        }
+
+        history.flush()?;
+
+        self.local_history.clear();
+        Ok(())
     }
 }

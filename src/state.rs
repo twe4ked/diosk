@@ -135,6 +135,7 @@ impl State {
     }
 
     pub fn quit(&mut self) {
+        self.input.flush_history().expect("unable to flush history");
         self.terminated = true;
         self.tx.send(Event::TerminateWorker).unwrap();
     }

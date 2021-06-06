@@ -60,20 +60,35 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
                         state.input.input_char(c);
                         state.clear_screen_and_render_page();
                     }
-                    Command::Enter => match state.input.enter() {
-                        InputEnterResult::Navigate(url) => {
-                            state.request(&url);
-                            state.clear_screen_and_render_page();
-                        }
-                        InputEnterResult::Quit => {
-                            state.quit();
-                        }
-                        InputEnterResult::Invalid(input) => {
+                    Command::Up => {
+                        state.input.up();
+                        state.clear_screen_and_render_page();
+                    }
+                    Command::Down => {
+                        state.input.down();
+                        state.clear_screen_and_render_page();
+                    }
+                    Command::Enter => {
+                        if state.input.input.is_empty() {
                             state.mode = Mode::Normal;
-                            state.set_error_message(format!("Invalid command: {}", input));
-                            state.clear_screen_and_render_page();
+                            return;
                         }
-                    },
+
+                        match state.input.enter() {
+                            InputEnterResult::Navigate(url) => {
+                                state.request(&url);
+                                state.clear_screen_and_render_page();
+                            }
+                            InputEnterResult::Quit => {
+                                state.quit();
+                            }
+                            InputEnterResult::Invalid(input) => {
+                                state.mode = Mode::Normal;
+                                state.set_error_message(format!("Invalid command: {}", input));
+                                state.clear_screen_and_render_page();
+                            }
+                        }
+                    }
                     Command::Esc => {
                         state.input.cancel();
                         state.mode = Mode::Normal;

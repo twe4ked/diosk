@@ -6,6 +6,8 @@ pub enum Command {
     AddChar(char),
     Enter,
     Esc,
+    Up,
+    Down,
 }
 
 pub fn command(key_event: KeyEvent) -> Option<Command> {
@@ -17,6 +19,8 @@ pub fn command(key_event: KeyEvent) -> Option<Command> {
         (KeyCode::Char(c), KeyModifiers::NONE) => Some(AddChar(c)),
         (KeyCode::Enter, _) => Some(Enter),
         (KeyCode::Esc, _) => Some(Esc),
+        (KeyCode::Up, _) => Some(Up),
+        (KeyCode::Down, _) => Some(Down),
 
         (key_code, modifiers) => {
             log::info!("{:?} {:?}", key_code, modifiers);
