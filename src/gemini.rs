@@ -30,7 +30,7 @@ pub enum TransactionError {
     InvalidDnsName(#[from] webpki::InvalidDNSNameError),
     #[error("IO error")]
     IoError(#[from] io::Error),
-    #[error("status code parse error")]
+    #[error("{0}")]
     StatusCodeParseError(#[from] status_code::ParseError),
     #[error("permanent failure: {0} {1}")]
     PermanentFailure(String, String),

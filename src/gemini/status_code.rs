@@ -23,8 +23,8 @@ pub enum StatusCode {
 }
 
 #[derive(Error, Debug)]
-#[error("status code parse error")]
-pub struct ParseError;
+#[error("status code parse error: {0}")]
+pub struct ParseError(String);
 
 impl StatusCode {
     // <STATUS><SPACE><META><CR><LF>
@@ -69,7 +69,7 @@ impl StatusCode {
                 let meta = meta.trim().to_string();
                 Ok(StatusCode::PermanentFailure { code, meta })
             }
-            _ => Err(ParseError {}),
+            _ => Err(ParseError(input.lines().next().unwrap().to_string())),
         }
     }
 
