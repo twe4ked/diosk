@@ -236,7 +236,6 @@ impl State {
                 self.current_url = Some(url);
                 self.last_status_code = Some(status_code);
             }
-            Response::RedirectLoop(_url) => todo!("handle redirect loops"),
         }
 
         terminal::clear_screen().unwrap();

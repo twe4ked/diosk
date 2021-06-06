@@ -22,7 +22,6 @@ pub enum Response {
         content: Option<String>,
         status_code: StatusCode,
     },
-    RedirectLoop(Option<String>),
 }
 
 #[derive(Error, Debug)]
@@ -37,6 +36,8 @@ pub enum TransactionError {
     PermanentFailure(String, String),
     #[error("no host")]
     NoHost,
+    #[error("redirect loop")]
+    RedirectLoop,
 }
 
 #[cfg(feature = "debug_content")]
@@ -137,7 +138,7 @@ fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, Trans
             // > such redirections usually indicate an infinite loop.
             // >    -- RFC-2068 (early HTTP/1.1 specification), section 10.3
             if redirect_count > 5 {
-                return Ok(Response::RedirectLoop(url));
+                return Err(TransactionError::RedirectLoop);
             }
 
             let url =
