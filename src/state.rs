@@ -272,7 +272,7 @@ impl<'a> StatusLineContext<'a> {
             status_code: state.last_status_code.clone(),
             url: state.current_url.clone(),
             error_message: state.error_message.clone(),
-            mode: state.mode.clone(),
+            mode: state.mode,
             input: &state.input.input,
         }
     }
