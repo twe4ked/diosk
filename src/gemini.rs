@@ -35,6 +35,8 @@ pub enum TransactionError {
     StatusCodeParseError(#[from] status_code::ParseError),
     #[error("permanent failure: {0} {1}")]
     PermanentFailure(String, String),
+    #[error("no host")]
+    NoHost,
 }
 
 #[cfg(feature = "debug_content")]
@@ -51,7 +53,7 @@ pub fn transaction(url: &Url) -> Result<Response, TransactionError> {
 }
 
 fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, TransactionError> {
-    let host = url.host_str().expect("no host");
+    let host = url.host_str().ok_or(TransactionError::NoHost)?;
 
     let mut tls_client = tls::client(&host)?;
 
