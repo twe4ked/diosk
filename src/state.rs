@@ -18,7 +18,7 @@ use input::Input;
 #[derive(Debug)]
 pub enum Event {
     TerminateWorker,
-    TransactionComplete(Response, Url),
+    TransactionComplete(Box<Response>, Url),
     TransactionError(TransactionError),
 }
 
@@ -91,7 +91,7 @@ impl State {
         let tx = self.tx.clone();
         thread::spawn(move || {
             let response = match transaction(&url) {
-                Ok(response) => tx.send(Event::TransactionComplete(response, url)),
+                Ok(response) => tx.send(Event::TransactionComplete(Box::new(response), url)),
                 Err(e) => tx.send(Event::TransactionError(e)),
             };
 

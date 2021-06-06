@@ -24,7 +24,7 @@ fn handle_event_loop(state: Arc<Mutex<State>>, rx: mpsc::Receiver<Event>) {
         match event {
             Event::TransactionComplete(response, url) => {
                 let mut state = state.lock().expect("poisoned");
-                state.transaction_complete(response, url);
+                state.transaction_complete(*response, url);
             }
             Event::TransactionError(e) => {
                 let mut state = state.lock().expect("poisoned");
