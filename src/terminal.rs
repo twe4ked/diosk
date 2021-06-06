@@ -172,6 +172,15 @@ impl Terminal {
                     .queue(Print(url))?; // TODO: Hide if we don't have a name because the URL is already being displayed
                 rows.push(row);
             }
+            Line::InvalidLink => {
+                let mut row = Vec::new();
+                row.queue(bg_color)?
+                    .queue(Fg(colors::MANTIS))?
+                    .queue(Print("=> "))?
+                    .queue(Fg(colors::OLD_BRICK))?
+                    .queue(Print("[INVALID LINK]"))?;
+                rows.push(row);
+            }
         }
 
         Ok(rows)

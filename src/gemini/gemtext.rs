@@ -4,6 +4,7 @@
 pub enum Line {
     Normal(String),
     Link { url: String, name: Option<String> },
+    InvalidLink,
 }
 
 impl Line {
@@ -39,13 +40,22 @@ impl Line {
 
             let _ = parts.next(); // =>
 
-            let url = parts.next().unwrap().to_owned();
+            if let Some(url) = parts.next() {
+                if url.is_empty() {
+                    return Line::InvalidLink;
+                }
 
-            // Name is optional
-            let name: String = parts.collect();
-            let name = if name.is_empty() { None } else { Some(name) };
+                // Name is optional
+                let name: String = parts.collect();
+                let name = if name.is_empty() { None } else { Some(name) };
 
-            Line::Link { url, name }
+                Line::Link {
+                    url: url.to_string(),
+                    name,
+                }
+            } else {
+                Line::InvalidLink
+            }
         } else {
             Line::Normal(line.to_string())
         }
