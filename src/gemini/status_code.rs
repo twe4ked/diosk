@@ -35,8 +35,8 @@ impl StatusCode {
 
         let code: String = parts.next().expect("infallible").chars().take(2).collect();
 
-        match code.chars().next() {
-            Some('2') => {
+        match (code.chars().nth(0), code.chars().nth(1)) {
+            (Some('2'), Some(_)) => {
                 // The <META> line is a MIME media type which applies to the response body
                 let rest: String = parts.collect();
                 let rest = rest.trim();
@@ -50,26 +50,26 @@ impl StatusCode {
                     mime_type: Some(mime_type),
                 })
             }
-            Some('3') => {
+            (Some('3'), Some(_)) => {
                 // <META> is a new URL for the requested resource
                 let url = parts.next().map(|s| s.to_owned());
                 Ok(StatusCode::Redirect { code, url })
             }
-            Some('4') => {
+            (Some('4'), Some(_)) => {
                 // The contents of <META> may provide additional information on the failure, and
                 // should be displayed to human users
                 let meta: String = parts.collect();
                 let meta = meta.trim().to_string();
                 Ok(StatusCode::TemporaryFailure { code, meta })
             }
-            Some('5') => {
+            (Some('5'), Some(_)) => {
                 // The contents of <META> may provide additional information on the failure, and
                 // should be displayed to human users
                 let meta: String = parts.collect();
                 let meta = meta.trim().to_string();
                 Ok(StatusCode::PermanentFailure { code, meta })
             }
-            _ => Err(ParseError(input.lines().next().unwrap().to_string())),
+            (_, _) => Err(ParseError(input.lines().next().unwrap().to_string())),
         }
     }
 
