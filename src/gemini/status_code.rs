@@ -69,7 +69,6 @@ impl StatusCode {
                 let meta = meta.trim().to_string();
                 Ok(StatusCode::PermanentFailure { code, meta })
             }
-            Some(s) => panic!("invalid status code: {}", s),
             _ => Err(ParseError {}),
         }
     }
