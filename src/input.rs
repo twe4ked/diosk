@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use crossterm::event::{read, Event, KeyCode, KeyEvent};
 use log::info;
 
+use crate::state::input::InputEnterResult;
 use crate::state::{Mode, State};
 
 mod edit;
@@ -47,11 +48,37 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
         Mode::Input => {
             if let Some(command) = edit::command(event) {
                 match command {
-                    Command::DeleteWord => state.delete_word(),
-                    Command::DeleteChar => state.delete_char(),
-                    Command::AddChar(c) => state.input_char(c),
-                    Command::Enter => state.input_mode_enter(),
-                    Command::Esc => state.cancel_input_mode(),
+                    Command::DeleteWord => {
+                        state.input.delete_word();
+                        state.clear_screen_and_render_page();
+                    }
+                    Command::DeleteChar => {
+                        state.input.delete_char();
+                        state.clear_screen_and_render_page();
+                    }
+                    Command::AddChar(c) => {
+                        state.input.input_char(c);
+                        state.clear_screen_and_render_page();
+                    }
+                    Command::Enter => match state.input.enter() {
+                        InputEnterResult::Navigate(url) => {
+                            state.request(&url);
+                            state.clear_screen_and_render_page();
+                        }
+                        InputEnterResult::Quit => {
+                            state.quit();
+                        }
+                        InputEnterResult::Invalid(input) => {
+                            state.mode = Mode::Normal;
+                            state.set_error_message(format!("Invalid command: {}", input));
+                            state.clear_screen_and_render_page();
+                        }
+                    },
+                    Command::Esc => {
+                        state.input.cancel();
+                        state.mode = Mode::Normal;
+                        state.clear_screen_and_render_page();
+                    }
                 }
             }
         }

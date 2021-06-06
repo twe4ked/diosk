@@ -1,6 +1,4 @@
 use std::fmt;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::sync::mpsc;
 use std::thread;
 
@@ -13,9 +11,9 @@ use crate::gemini::status_code::StatusCode;
 use crate::gemini::{transaction, Response, TransactionError};
 use crate::terminal::{self, Terminal};
 
-mod command;
+pub mod input;
 
-use command::Command;
+use input::Input;
 
 #[derive(Debug)]
 pub enum Event {
@@ -35,13 +33,13 @@ pub struct State {
     current_line_index: usize,
     current_row: u16,
     content: Option<String>,
-    mode: Mode,
+    pub mode: Mode,
     tx: mpsc::Sender<Event>,
     current_url: Option<Url>,
     last_status_code: Option<StatusCode>,
     scroll_offset: u16,
     error_message: Option<String>,
-    input: String,
+    pub input: Input,
     width: u16,
     height: u16,
     terminated: bool,
@@ -80,14 +78,14 @@ impl State {
             tx,
             scroll_offset: 0,
             error_message: None,
-            input: String::new(),
+            input: Input::new(),
             width,
             height,
             terminated: false,
         }
     }
 
-    fn request(&mut self, url_or_path: &str) {
+    pub fn request(&mut self, url_or_path: &str) {
         let url = self.qualify_url(&url_or_path);
         self.mode = Mode::Loading;
         let tx = self.tx.clone();
@@ -136,33 +134,7 @@ impl State {
         self.clear_screen_and_render_page();
     }
 
-    pub fn input_char(&mut self, c: char) {
-        self.input.push(c);
-        self.clear_screen_and_render_page();
-    }
-
-    pub fn cancel_input_mode(&mut self) {
-        self.mode = Mode::Normal;
-        self.input.clear();
-        self.clear_screen_and_render_page();
-    }
-
-    pub fn delete_word(&mut self) {
-        let pat = |c: char| !c.is_ascii_alphanumeric() && c != '_';
-        let mut split = self.input.split_inclusive(pat);
-        let _deleted = split.next_back();
-        self.input = split.collect();
-        self.clear_screen_and_render_page();
-    }
-
-    pub fn delete_char(&mut self) {
-        let mut chars = self.input.chars();
-        chars.next_back();
-        self.input = chars.collect();
-        self.clear_screen_and_render_page();
-    }
-
-    fn quit(&mut self) {
+    pub fn quit(&mut self) {
         self.terminated = true;
         self.tx.send(Event::TerminateWorker).unwrap();
     }
@@ -184,36 +156,6 @@ impl State {
 
     pub fn loading_mode_enter(&mut self) {
         info!("enter while loading");
-    }
-
-    pub fn input_mode_enter(&mut self) {
-        let input = self.input.clone();
-
-        let mut history = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("target/history.txt")
-            .unwrap();
-        write!(&mut history, "{}\n", &input).unwrap();
-
-        match command::from(&input) {
-            Some(command) => match command {
-                Command::Navigate(url) => {
-                    self.request(url);
-                    self.clear_screen_and_render_page();
-                }
-                Command::Quit => {
-                    self.quit();
-                }
-            },
-            None => {
-                self.mode = Mode::Normal;
-                self.set_error_message(format!("Invalid command: {}", self.input));
-                self.clear_screen_and_render_page();
-            }
-        }
-
-        self.input.clear();
     }
 
     pub fn terminated(&self) -> bool {
@@ -258,7 +200,7 @@ impl State {
             .unwrap_or_else(|| vec![Line::Normal(String::new())])
     }
 
-    fn set_error_message(&mut self, message: String) {
+    pub fn set_error_message(&mut self, message: String) {
         self.error_message = Some(message);
     }
 
@@ -330,7 +272,7 @@ impl<'a> StatusLineContext<'a> {
             url: state.current_url.clone(),
             error_message: state.error_message.clone(),
             mode: state.mode.clone(),
-            input: &state.input,
+            input: &state.input.input,
         }
     }
 }
