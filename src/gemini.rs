@@ -133,7 +133,10 @@ fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, Trans
         StatusCode::PermanentFailure { code, meta } => {
             Err(TransactionError::PermanentFailure(code, meta))
         }
-        StatusCode::Redirect { code: _, url } => {
+        StatusCode::Redirect {
+            code: _,
+            url: redirect_url,
+        } => {
             // > A user agent SHOULD NOT automatically redirect a request more than 5 times, since
             // > such redirections usually indicate an infinite loop.
             // >    -- RFC-2068 (early HTTP/1.1 specification), section 10.3
@@ -141,9 +144,23 @@ fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, Trans
                 return Err(TransactionError::RedirectLoop);
             }
 
-            let url =
-                Url::parse(&url.expect("missing redirect URL")).expect("invalid redirect URL");
+            let url = qualify_url(Some(url), &redirect_url.unwrap());
             transaction_inner(&url, redirect_count + 1)
         }
+    }
+}
+
+pub fn qualify_url(current_url: Option<&Url>, url_or_path: &str) -> Url {
+    match Url::parse(&url_or_path) {
+        Ok(url) => url,
+        Err(url::ParseError::RelativeUrlWithoutBase) => {
+            let mut url = current_url.unwrap().clone();
+            // If we don't have a URL base, we clear the query/fragment and join
+            // on the requested path.
+            url.set_query(None);
+            url.set_fragment(None);
+            url.join(&url_or_path).unwrap()
+        }
+        e => panic!("{:?}", e),
     }
 }

@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::gemini::gemtext::Line;
 use crate::gemini::status_code::StatusCode;
-use crate::gemini::{transaction, Response, TransactionError};
+use crate::gemini::{self, transaction, Response, TransactionError};
 use crate::terminal::{self, Terminal};
 
 pub mod input;
@@ -179,18 +179,7 @@ impl State {
 
     /// Parse the URL to ensure it's valid and check if it has a base path
     fn qualify_url(&self, url_or_path: &str) -> Url {
-        match Url::parse(&url_or_path) {
-            Ok(url) => url,
-            Err(url::ParseError::RelativeUrlWithoutBase) => {
-                // If we don't have a URL base, we clear the query/fragment and join
-                // on the requested path.
-                let mut url = self.current_url.as_ref().unwrap().clone();
-                url.set_query(None);
-                url.set_fragment(None);
-                url.join(&url_or_path).unwrap()
-            }
-            e => panic!("{:?}", e),
-        }
+        gemini::qualify_url(self.current_url.as_ref(), url_or_path)
     }
 
     // TODO: Store parsed lines directly on Self
