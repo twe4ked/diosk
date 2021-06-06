@@ -10,3 +10,5 @@ Yb,  88     `8b,                         IP'`Yb
 ```
 
 ## A Project Gemini TUI browser.
+
+![](/screenshot.png)
