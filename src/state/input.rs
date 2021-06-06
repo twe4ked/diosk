@@ -21,6 +21,7 @@ impl InputEnterResult {
     }
 }
 
+#[derive(Default)]
 pub struct Input {
     pub input: String,
     history_index: Option<usize>,
@@ -40,10 +41,8 @@ impl Input {
         let history: Vec<String> = history.lines().map(|s| s.unwrap()).collect();
 
         Self {
-            input: String::new(),
-            history_index: None,
             existing_history: history,
-            local_history: Vec::new(),
+            ..Self::default()
         }
     }
 
