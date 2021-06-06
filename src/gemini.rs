@@ -34,6 +34,8 @@ pub enum TransactionError {
     StatusCodeParseError(#[from] status_code::ParseError),
     #[error("permanent failure: {0} {1}")]
     PermanentFailure(String, String),
+    #[error("temporary failure: {0} {1}")]
+    TemporaryFailure(String, String),
     #[error("no host")]
     NoHost,
     #[error("redirect loop")]
@@ -129,7 +131,9 @@ fn transaction_inner(url: &Url, redirect_count: usize) -> Result<Response, Trans
                 _ => todo!("unsupported mime type: {}", mime_type),
             }
         }
-        StatusCode::TemporaryFailure { .. } => todo!(),
+        StatusCode::TemporaryFailure { code, meta } => {
+            Err(TransactionError::TemporaryFailure(code, meta))
+        }
         StatusCode::PermanentFailure { code, meta } => {
             Err(TransactionError::PermanentFailure(code, meta))
         }

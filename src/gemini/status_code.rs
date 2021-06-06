@@ -10,6 +10,7 @@ pub enum StatusCode {
     },
     TemporaryFailure {
         code: String,
+        meta: String,
     },
     Redirect {
         code: String,
@@ -57,7 +58,9 @@ impl StatusCode {
             Some('4') => {
                 // The contents of <META> may provide additional information on the failure, and
                 // should be displayed to human users
-                Ok(StatusCode::TemporaryFailure { code })
+                let meta: String = parts.collect();
+                let meta = meta.trim().to_string();
+                Ok(StatusCode::TemporaryFailure { code, meta })
             }
             Some('5') => {
                 // The contents of <META> may provide additional information on the failure, and
@@ -74,7 +77,7 @@ impl StatusCode {
     pub fn code(&self) -> String {
         match self {
             StatusCode::Success { code, .. } => code,
-            StatusCode::TemporaryFailure { code } => code,
+            StatusCode::TemporaryFailure { code, .. } => code,
             StatusCode::Redirect { code, .. } => code,
             StatusCode::PermanentFailure { code, .. } => code,
         }
