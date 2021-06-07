@@ -33,13 +33,14 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
     match state.mode() {
         Mode::Normal => match event.code {
             KeyCode::Char(':') => state.input(),
+            KeyCode::Char('/') => state.search(),
             KeyCode::Char('j') => state.down(),
             KeyCode::Char('k') => state.up(),
             KeyCode::Enter => state.enter(),
             _ => {}
         },
 
-        Mode::Input => {
+        Mode::Input | Mode::Search => {
             if let Some(command) = edit::command(event) {
                 match command {
                     Command::DeleteWord => {
@@ -68,19 +69,26 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
                             return;
                         }
 
-                        match state.input.enter() {
-                            InputEnterResult::Navigate(url) => {
-                                state.request(&url);
-                                state.clear_screen_and_render_page();
+                        if matches!(state.mode, Mode::Input) {
+                            match state.input.enter() {
+                                InputEnterResult::Navigate(url) => {
+                                    state.request(&url);
+                                    state.clear_screen_and_render_page();
+                                }
+                                InputEnterResult::Quit => {
+                                    state.quit();
+                                }
+                                InputEnterResult::Invalid(input) => {
+                                    state.mode = Mode::Normal;
+                                    state.set_error_message(format!("Invalid command: {}", input));
+                                    state.clear_screen_and_render_page();
+                                }
                             }
-                            InputEnterResult::Quit => {
-                                state.quit();
-                            }
-                            InputEnterResult::Invalid(input) => {
-                                state.mode = Mode::Normal;
-                                state.set_error_message(format!("Invalid command: {}", input));
-                                state.clear_screen_and_render_page();
-                            }
+                        } else {
+                            state.input.search();
+                            state.mode = Mode::Normal;
+                            state.set_error_message(format!("Search not implemented"));
+                            state.clear_screen_and_render_page();
                         }
                     }
                     Command::Esc => {

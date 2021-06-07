@@ -87,6 +87,7 @@ impl Input {
         self.set_input_from_history();
     }
 
+    // TODO: History needs to be separate for commands and search
     pub fn set_input_from_history(&mut self) {
         let history = self
             .existing_history
@@ -105,6 +106,10 @@ impl Input {
         self.local_history.push(input.clone());
         self.history_index = None;
         InputEnterResult::from(&input)
+    }
+
+    pub fn search(&mut self) {
+        self.input.clear();
     }
 
     pub fn flush_history(&mut self) -> io::Result<()> {

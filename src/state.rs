@@ -26,6 +26,7 @@ pub enum Event {
 pub enum Mode {
     Normal,
     Input,
+    Search,
 }
 
 pub struct State {
@@ -133,6 +134,11 @@ impl State {
 
     pub fn input(&mut self) {
         self.mode = Mode::Input;
+        self.clear_screen_and_render_page();
+    }
+
+    pub fn search(&mut self) {
+        self.mode = Mode::Search;
         self.clear_screen_and_render_page();
     }
 

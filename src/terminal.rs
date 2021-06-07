@@ -230,15 +230,22 @@ impl Terminal {
             );
         }
 
-        if matches!(status_line_context.mode, Mode::Input) {
+        if matches!(status_line_context.mode, Mode::Input | Mode::Search) {
             let cursor_pos = cursor::MoveTo(0, self.height - 1);
             let cursor_color = colors::FOREGROUND;
 
+            let c = if matches!(status_line_context.mode, Mode::Input) {
+                ':'
+            } else {
+                '/'
+            };
+
             print!(
-                "{cursor_pos}{fg_1}{bg_1}:{input}{fg_2}{bg_2} {bg_3}",
+                "{cursor_pos}{fg_1}{bg_1}{c}{input}{fg_2}{bg_2} {bg_3}",
                 cursor_pos = cursor_pos,
                 fg_1 = Fg(colors::FOREGROUND),
                 bg_1 = Bg(colors::BACKGROUND),
+                c = c,
                 bg_2 = Bg(cursor_color),
                 fg_2 = Fg(cursor_color),
                 bg_3 = Bg(colors::BACKGROUND),
