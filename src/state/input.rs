@@ -1,6 +1,7 @@
 use std::io;
 
 use crate::state::history::History;
+use crate::state::Mode;
 
 pub enum InputEnterResult {
     Navigate(String),
@@ -58,27 +59,34 @@ impl Input {
         self.input = chars.collect();
     }
 
-    pub fn up(&mut self) {
-        self.command_history.up();
-        self.input = self.command_history.get();
+    pub fn up(&mut self, mode: Mode) {
+        self.history(mode).up();
+        self.input = self.history(mode).get();
     }
 
-    pub fn down(&mut self) {
-        if self.command_history.down() {
-            self.input = self.command_history.get();
+    pub fn down(&mut self, mode: Mode) {
+        if self.history(mode).down() {
+            self.input = self.history(mode).get();
         }
     }
 
-    pub fn enter(&mut self) -> InputEnterResult {
+    pub fn enter(&mut self, mode: Mode) -> InputEnterResult {
         let input = self.input.clone();
         self.input.clear();
-        self.command_history.push(input.clone());
-        self.command_history.reset_index();
+        self.history(mode).push(input.clone());
+        self.history(mode).reset_index();
         InputEnterResult::from(&input)
     }
 
     pub fn search(&mut self) {
         self.input.clear();
+    }
+
+    pub fn history(&mut self, mode: Mode) -> &mut History {
+        match mode {
+            Mode::Input => &mut self.command_history,
+            _ => panic!("no history for mode: {:?}", mode),
+        }
     }
 
     pub fn flush_history(&mut self) -> io::Result<()> {

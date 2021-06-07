@@ -56,11 +56,11 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
                         state.clear_screen_and_render_page();
                     }
                     Command::Up => {
-                        state.input.up();
+                        state.input.up(state.mode);
                         state.clear_screen_and_render_page();
                     }
                     Command::Down => {
-                        state.input.down();
+                        state.input.down(state.mode);
                         state.clear_screen_and_render_page();
                     }
                     Command::Enter => {
@@ -70,7 +70,7 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
                         }
 
                         if matches!(state.mode, Mode::Input) {
-                            match state.input.enter() {
+                            match state.input.enter(state.mode) {
                                 InputEnterResult::Navigate(url) => {
                                     state.request(&url);
                                     state.clear_screen_and_render_page();
