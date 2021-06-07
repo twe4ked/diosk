@@ -11,6 +11,7 @@ use crate::gemini::status_code::StatusCode;
 use crate::gemini::{self, transaction, Response, TransactionError};
 use crate::terminal::{self, Terminal};
 
+pub mod history;
 pub mod input;
 
 use input::Input;

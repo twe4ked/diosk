@@ -1,5 +1,6 @@
-use std::fs::OpenOptions;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io;
+
+use crate::state::history::History;
 
 pub enum InputEnterResult {
     Navigate(String),
@@ -24,24 +25,14 @@ impl InputEnterResult {
 #[derive(Default)]
 pub struct Input {
     pub input: String,
-    history_index: Option<usize>,
-    existing_history: Vec<String>,
-    local_history: Vec<String>,
+    // TODO: History needs to be separate for commands and search
+    command_history: History,
 }
 
 impl Input {
     pub fn new() -> Self {
-        let history = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .read(true)
-            .open("target/history.txt")
-            .unwrap();
-        let history = BufReader::new(history);
-        let history: Vec<String> = history.lines().map(|s| s.unwrap()).collect();
-
         Self {
-            existing_history: history,
+            command_history: History::new("target/history.txt"),
             ..Self::default()
         }
     }
@@ -68,43 +59,21 @@ impl Input {
     }
 
     pub fn up(&mut self) {
-        match self.history_index.as_mut() {
-            Some(i) => *i += 1,
-            None => self.history_index = Some(0),
-        }
-        self.set_input_from_history();
+        self.command_history.up();
+        self.input = self.command_history.get();
     }
 
     pub fn down(&mut self) {
-        if self.history_index == Some(0) {
-            return;
+        if self.command_history.down() {
+            self.input = self.command_history.get();
         }
-
-        match self.history_index.as_mut() {
-            Some(i) => *i -= 1,
-            None => self.history_index = Some(0),
-        }
-        self.set_input_from_history();
-    }
-
-    // TODO: History needs to be separate for commands and search
-    pub fn set_input_from_history(&mut self) {
-        let history = self
-            .existing_history
-            .iter()
-            .chain(self.local_history.iter());
-
-        self.input = history
-            .rev()
-            .nth(self.history_index.expect("must be set"))
-            .map_or_else(String::new, |s| s.clone());
     }
 
     pub fn enter(&mut self) -> InputEnterResult {
         let input = self.input.clone();
         self.input.clear();
-        self.local_history.push(input.clone());
-        self.history_index = None;
+        self.command_history.push(input.clone());
+        self.command_history.reset_index();
         InputEnterResult::from(&input)
     }
 
@@ -113,18 +82,6 @@ impl Input {
     }
 
     pub fn flush_history(&mut self) -> io::Result<()> {
-        let mut history = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("target/history.txt")?;
-
-        for line in &self.local_history {
-            writeln!(history, "{}", line)?;
-        }
-
-        history.flush()?;
-
-        self.local_history.clear();
-        Ok(())
+        self.command_history.flush()
     }
 }
