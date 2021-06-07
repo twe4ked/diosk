@@ -25,7 +25,6 @@ pub enum Event {
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {
     Normal,
-    Loading,
     Input,
 }
 
@@ -43,6 +42,7 @@ pub struct State {
     width: u16,
     height: u16,
     terminated: bool,
+    loading: bool,
 }
 
 impl fmt::Debug for State {
@@ -82,12 +82,14 @@ impl State {
             width,
             height,
             terminated: false,
+            loading: false,
         }
     }
 
     pub fn request(&mut self, url_or_path: &str) {
         let url = self.qualify_url(&url_or_path);
-        self.mode = Mode::Loading;
+        self.loading = true;
+        self.mode = Mode::Normal;
         let tx = self.tx.clone();
         thread::spawn(move || {
             let response = match transaction(&url) {
@@ -141,7 +143,7 @@ impl State {
     }
 
     pub fn enter(&mut self) {
-        if matches!(self.mode, Mode::Loading) {
+        if self.loading {
             info!("enter while loading");
             return;
         }
@@ -153,10 +155,6 @@ impl State {
         } else {
             // Nothing to do on non-link lines
         }
-    }
-
-    pub fn loading_mode_enter(&mut self) {
-        info!("enter while loading");
     }
 
     pub fn terminated(&self) -> bool {
@@ -228,6 +226,7 @@ impl State {
         }
 
         terminal::clear_screen().unwrap();
+        self.loading = false;
         self.mode = Mode::Normal;
         self.render_page();
     }
@@ -237,6 +236,7 @@ impl State {
 
         self.set_error_message(e.to_string());
         terminal::clear_screen().unwrap();
+        self.loading = false;
         self.mode = Mode::Normal;
         self.render_page();
     }
@@ -252,6 +252,7 @@ pub struct StatusLineContext<'a> {
     pub error_message: Option<String>,
     pub mode: Mode,
     pub input: &'a str,
+    pub loading: bool,
 }
 
 impl<'a> StatusLineContext<'a> {
@@ -262,6 +263,7 @@ impl<'a> StatusLineContext<'a> {
             error_message: state.error_message.clone(),
             mode: state.mode,
             input: &state.input.input,
+            loading: state.loading,
         }
     }
 }

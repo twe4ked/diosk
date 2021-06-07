@@ -31,17 +31,11 @@ fn handle_key_event(state: &mut State, event: KeyEvent) {
     state.clear_error_message();
 
     match state.mode() {
-        Mode::Normal | Mode::Loading => match event.code {
+        Mode::Normal => match event.code {
             KeyCode::Char(':') => state.input(),
             KeyCode::Char('j') => state.down(),
             KeyCode::Char('k') => state.up(),
-            KeyCode::Enter => {
-                if matches!(state.mode(), Mode::Loading) {
-                    state.loading_mode_enter();
-                } else {
-                    state.enter();
-                }
-            }
+            KeyCode::Enter => state.enter(),
             _ => {}
         },
 
