@@ -26,14 +26,15 @@ impl InputEnterResult {
 #[derive(Default)]
 pub struct Input {
     pub input: String,
-    // TODO: History needs to be separate for commands and search
     command_history: History,
+    search_history: History,
 }
 
 impl Input {
     pub fn new() -> Self {
         Self {
-            command_history: History::new("target/history.txt"),
+            command_history: History::new("target/command_history.txt"),
+            search_history: History::new("target/search_history.txt"),
             ..Self::default()
         }
     }
@@ -85,11 +86,12 @@ impl Input {
     pub fn history(&mut self, mode: Mode) -> &mut History {
         match mode {
             Mode::Input => &mut self.command_history,
+            Mode::Search => &mut self.search_history,
             _ => panic!("no history for mode: {:?}", mode),
         }
     }
 
     pub fn flush_history(&mut self) -> io::Result<()> {
-        self.command_history.flush()
+        self.search_history.flush()
     }
 }
