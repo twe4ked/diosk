@@ -115,7 +115,7 @@ impl Terminal {
         let logo_width: u16 = LOGO.lines().map(|l| l.len()).max().expect("infallible") as _;
 
         let x = (self.width / 2) - (logo_width / 2);
-        let y = (self.height / 2) - (logo_height / 2);
+        let y = (self.page_rows() / 2) - (logo_height / 2);
 
         // Move logo to the left slightly as its asymmetrical
         let x = x - 6;
@@ -189,9 +189,8 @@ impl Terminal {
     }
 
     fn draw_status_line(&self, status_line_context: StatusLineContext) {
-        let cursor_pos = cursor::MoveTo(0, self.height - 1);
-
         if status_line_context.loading {
+            let cursor_pos = cursor::MoveTo(0, self.height - 2);
             print!(
                 "{cursor_pos}{fg_1}{bg_1} Loading... {fg_2}{bg_2}",
                 cursor_pos = cursor_pos,
@@ -200,54 +199,51 @@ impl Terminal {
                 fg_2 = Fg(colors::FOREGROUND),
                 bg_2 = Bg(colors::BACKGROUND),
             );
-            return;
+        } else {
+            let cursor_pos = cursor::MoveTo(0, self.height - 2);
+            let status_code = status_line_context
+                .status_code
+                .map(|s| s.code())
+                .unwrap_or_else(|| "--".to_string());
+
+            let (fg_1, bg_1, message) =
+                if let Some(error_message) = status_line_context.error_message {
+                    (Fg(colors::TEMPTRESS), Bg(colors::OLD_BRICK), error_message)
+                } else {
+                    let url = status_line_context
+                        .url
+                        .map(|u| u.to_string())
+                        .unwrap_or_else(|| "-".to_string());
+                    (Fg(colors::GREEN_SMOKE), Bg(colors::COSTA_DEL_SOL), url)
+                };
+
+            print!(
+                "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {message:width$}",
+                cursor_pos = cursor_pos,
+                fg_1 = fg_1,
+                bg_1 = bg_1,
+                fg_2 = Fg(colors::FOREGROUND),
+                bg_2 = Bg(colors::BACKGROUND),
+                status_code = status_code,
+                message = message,
+                width = self.width as usize - 5
+            );
         }
 
-        match status_line_context.mode {
-            Mode::Normal => {
-                let status_code = status_line_context
-                    .status_code
-                    .map(|s| s.code())
-                    .unwrap_or_else(|| "--".to_string());
+        if matches!(status_line_context.mode, Mode::Input) {
+            let cursor_pos = cursor::MoveTo(0, self.height - 1);
+            let cursor_color = colors::FOREGROUND;
 
-                let (fg_1, bg_1, message) =
-                    if let Some(error_message) = status_line_context.error_message {
-                        (Fg(colors::TEMPTRESS), Bg(colors::OLD_BRICK), error_message)
-                    } else {
-                        let url = status_line_context
-                            .url
-                            .map(|u| u.to_string())
-                            .unwrap_or_else(|| "-".to_string());
-                        (Fg(colors::GREEN_SMOKE), Bg(colors::COSTA_DEL_SOL), url)
-                    };
-
-                print!(
-                    "{cursor_pos}{fg_1}{bg_1} {status_code} {fg_2}{bg_2} {message:width$}",
-                    cursor_pos = cursor_pos,
-                    fg_1 = fg_1,
-                    bg_1 = bg_1,
-                    fg_2 = Fg(colors::FOREGROUND),
-                    bg_2 = Bg(colors::BACKGROUND),
-                    status_code = status_code,
-                    message = message,
-                    width = self.width as usize - 5
-                );
-            }
-
-            Mode::Input => {
-                let cursor_color = colors::FOREGROUND;
-
-                print!(
-                    "{cursor_pos}{fg_1}{bg_1}:{input}{fg_2}{bg_2} {bg_3}",
-                    cursor_pos = cursor_pos,
-                    fg_1 = Fg(colors::FOREGROUND),
-                    bg_1 = Bg(colors::BACKGROUND),
-                    bg_2 = Bg(cursor_color),
-                    fg_2 = Fg(cursor_color),
-                    bg_3 = Bg(colors::BACKGROUND),
-                    input = status_line_context.input,
-                );
-            }
+            print!(
+                "{cursor_pos}{fg_1}{bg_1}:{input}{fg_2}{bg_2} {bg_3}",
+                cursor_pos = cursor_pos,
+                fg_1 = Fg(colors::FOREGROUND),
+                bg_1 = Bg(colors::BACKGROUND),
+                bg_2 = Bg(cursor_color),
+                fg_2 = Fg(cursor_color),
+                bg_3 = Bg(colors::BACKGROUND),
+                input = status_line_context.input,
+            );
         }
     }
 
@@ -258,7 +254,7 @@ impl Terminal {
 
     pub fn page_rows(&self) -> u16 {
         // -1 for the status row
-        self.height - 1
+        self.height - 2
     }
 }
 
